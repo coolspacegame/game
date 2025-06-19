@@ -1,14 +1,21 @@
-[gd_scene load_steps=17 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=22 format=3 uid="uid://d01ygggpfvijv"]
 
-[ext_resource type="Texture2D" uid="uid://dhv1nov1xbijt" path="res://img/circle.png" id="1_wtcfe"]
+[ext_resource type="Texture2D" uid="uid://do55u06js8o50" path="res://img/sphere.png" id="1_d21ai"]
 [ext_resource type="Script" uid="uid://cwndrwkqshltx" path="res://TheCharacter.cs" id="2_0e48y"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
+[ext_resource type="Texture2D" uid="uid://i1xtnpthr1uw" path="res://img/sphere-norm.png" id="2_rj586"]
 [ext_resource type="Script" uid="uid://d3esgv0nox1yx" path="res://Triangle.cs" id="3_0hol4"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
 [ext_resource type="Script" uid="uid://dugyqund6lcdy" path="res://TheCamera.cs" id="6_kdubu"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_0e48y"]
 radius = 200.0
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_rj586"]
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_4d7sh"]
+diffuse_texture = ExtResource("1_d21ai")
+normal_texture = ExtResource("2_rj586")
 
 [sub_resource type="Gradient" id="Gradient_q6r6c"]
 offsets = PackedFloat32Array(1)
@@ -54,6 +61,15 @@ shader = SubResource("VisualShader_0hol4")
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
 size = Vector2(70, 70)
 
+[sub_resource type="Gradient" id="Gradient_kdubu"]
+offsets = PackedFloat32Array(0, 0.654481)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_d21ai"]
+gradient = SubResource("Gradient_kdubu")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
 shader = ExtResource("2_q6r6c")
 
@@ -70,11 +86,13 @@ size = Vector2(2048, 2048)
 shape = SubResource("CircleShape2D_0e48y")
 
 [node name="Circle" type="Sprite2D" parent="TheEnvironment"]
-scale = Vector2(0.4, 0.4)
-texture = ExtResource("1_wtcfe")
+material = SubResource("CanvasItemMaterial_rj586")
+position = Vector2(1, 0)
+scale = Vector2(0.38, 0.38)
+texture = SubResource("CanvasTexture_4d7sh")
 
 [node name="TheCharacter" type="RigidBody2D" parent="."]
-position = Vector2(0, -272)
+position = Vector2(0, -296)
 mass = 10.0
 gravity_scale = 0.0
 script = ExtResource("2_0e48y")
@@ -85,6 +103,7 @@ texture = SubResource("GradientTexture2D_kdubu")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCharacter"]
 material = SubResource("ShaderMaterial_kdubu")
 shape = SubResource("RectangleShape2D_wtcfe")
+debug_color = Color(0, 0.595, 0.7, 0)
 
 [node name="Triangle" type="Node2D" parent="TheCharacter"]
 script = ExtResource("3_0hol4")
@@ -99,22 +118,30 @@ rotation = -2.35619
 scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
 
-[node name="Camera" type="RigidBody2D" parent="."]
+[node name="PointLight2D" type="PointLight2D" parent="TheCharacter"]
+position = Vector2(-1.99999, 4)
+scale = Vector2(1000, 1000)
+blend_mode = 2
+texture = SubResource("GradientTexture2D_d21ai")
+
+[node name="TheCamera" type="RigidBody2D" parent="."]
 position = Vector2(0, -270)
 collision_layer = 0
 collision_mask = 0
 gravity_scale = 0.0
 script = ExtResource("6_kdubu")
 
-[node name="Camera2D" type="Camera2D" parent="Camera"]
+[node name="Camera2D" type="Camera2D" parent="TheCamera"]
 
-[node name="Background" type="MeshInstance2D" parent="Camera/Camera2D"]
+[node name="Background" type="MeshInstance2D" parent="TheCamera/Camera2D"]
+light_mask = 0
 z_index = -1
 material = SubResource("ShaderMaterial_d21ai")
+position = Vector2(6, -16)
 mesh = SubResource("QuadMesh_rj586")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Camera"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TheCamera"]
 shape = SubResource("CircleShape2D_q6r6c")
 
 [connection signal="InputForceApplied" from="TheCharacter" to="TheCharacter/Triangle" method="OnInputForceApplied"]
-[connection signal="PositionUpdated" from="TheCharacter" to="Camera" method="OnCharacterPositionUpdated"]
+[connection signal="PositionUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterPositionUpdated"]
