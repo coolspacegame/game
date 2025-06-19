@@ -1,16 +1,11 @@
-[gd_scene load_steps=15 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=17 format=3 uid="uid://d01ygggpfvijv"]
 
 [ext_resource type="Texture2D" uid="uid://dhv1nov1xbijt" path="res://img/circle.png" id="1_wtcfe"]
 [ext_resource type="Script" uid="uid://cwndrwkqshltx" path="res://TheCharacter.cs" id="2_0e48y"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
 [ext_resource type="Script" uid="uid://d3esgv0nox1yx" path="res://Triangle.cs" id="3_0hol4"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
-shader = ExtResource("2_q6r6c")
-
-[sub_resource type="QuadMesh" id="QuadMesh_rj586"]
-size = Vector2(1500, 800)
+[ext_resource type="Script" uid="uid://dugyqund6lcdy" path="res://TheCamera.cs" id="6_kdubu"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_0e48y"]
 radius = 200.0
@@ -59,13 +54,17 @@ shader = SubResource("VisualShader_0hol4")
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
 size = Vector2(70, 70)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
+shader = ExtResource("2_q6r6c")
+
+[sub_resource type="QuadMesh" id="QuadMesh_rj586"]
+size = Vector2(2048, 2048)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
+
 [node name="Node2D" type="Node2D"]
 
 [node name="TheEnvironment" type="StaticBody2D" parent="."]
-
-[node name="Background" type="MeshInstance2D" parent="TheEnvironment"]
-material = SubResource("ShaderMaterial_d21ai")
-mesh = SubResource("QuadMesh_rj586")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheEnvironment"]
 shape = SubResource("CircleShape2D_0e48y")
@@ -76,7 +75,8 @@ texture = ExtResource("1_wtcfe")
 
 [node name="TheCharacter" type="RigidBody2D" parent="."]
 position = Vector2(0, -272)
-gravity_scale = 0.1
+mass = 10.0
+gravity_scale = 0.0
 script = ExtResource("2_0e48y")
 
 [node name="Sprite2D" type="Sprite2D" parent="TheCharacter"]
@@ -99,6 +99,22 @@ rotation = -2.35619
 scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera" type="RigidBody2D" parent="."]
+position = Vector2(0, -270)
+collision_layer = 0
+collision_mask = 0
+gravity_scale = 0.0
+script = ExtResource("6_kdubu")
+
+[node name="Camera2D" type="Camera2D" parent="Camera"]
+
+[node name="Background" type="MeshInstance2D" parent="Camera/Camera2D"]
+z_index = -1
+material = SubResource("ShaderMaterial_d21ai")
+mesh = SubResource("QuadMesh_rj586")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Camera"]
+shape = SubResource("CircleShape2D_q6r6c")
 
 [connection signal="InputForceApplied" from="TheCharacter" to="TheCharacter/Triangle" method="OnInputForceApplied"]
+[connection signal="PositionUpdated" from="TheCharacter" to="Camera" method="OnCharacterPositionUpdated"]
