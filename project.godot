@@ -24,12 +24,9 @@ project/assembly_name="spacegame"
 version_control/plugin_name="GitPlugin"
 version_control/autoload_on_startup=true
 
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/FastNoiseLiteRuntimeShader/plugin.cfg")
-
 [physics]
 
+2d/physics_engine="GodotPhysics2D"
 2d/default_gravity=0.0
 2d/default_gravity_vector=Vector2(0, 0)
 

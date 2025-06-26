@@ -1,21 +1,12 @@
-[gd_scene load_steps=22 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=20 format=3 uid="uid://d01ygggpfvijv"]
 
-[ext_resource type="Texture2D" uid="uid://do55u06js8o50" path="res://img/sphere.png" id="1_d21ai"]
 [ext_resource type="Script" uid="uid://cwndrwkqshltx" path="res://TheCharacter.cs" id="2_0e48y"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
-[ext_resource type="Texture2D" uid="uid://i1xtnpthr1uw" path="res://img/sphere-norm.png" id="2_rj586"]
 [ext_resource type="Script" uid="uid://d3esgv0nox1yx" path="res://Triangle.cs" id="3_0hol4"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
+[ext_resource type="Script" uid="uid://clq2dmvmxom14" path="res://FPSLabel.cs" id="5_d21ai"]
 [ext_resource type="Script" uid="uid://dugyqund6lcdy" path="res://TheCamera.cs" id="6_kdubu"]
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_0e48y"]
-radius = 200.0
-
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_rj586"]
-
-[sub_resource type="CanvasTexture" id="CanvasTexture_4d7sh"]
-diffuse_texture = ExtResource("1_d21ai")
-normal_texture = ExtResource("2_rj586")
+[ext_resource type="Script" uid="uid://s4f1rgd0cdvy" path="res://TheGenerator.cs" id="8_rj586"]
 
 [sub_resource type="Gradient" id="Gradient_q6r6c"]
 offsets = PackedFloat32Array(1)
@@ -78,21 +69,18 @@ size = Vector2(2048, 2048)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
 
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_d21ai"]
+noise_type = 2
+fractal_type = 0
+fractal_gain = 0.2
+domain_warp_type = 2
+domain_warp_amplitude = 5.0
+domain_warp_fractal_type = 2
+domain_warp_fractal_octaves = 2
+
 [node name="Node2D" type="Node2D"]
 
-[node name="TheEnvironment" type="StaticBody2D" parent="."]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TheEnvironment"]
-shape = SubResource("CircleShape2D_0e48y")
-
-[node name="Circle" type="Sprite2D" parent="TheEnvironment"]
-material = SubResource("CanvasItemMaterial_rj586")
-position = Vector2(1, 0)
-scale = Vector2(0.38, 0.38)
-texture = SubResource("CanvasTexture_4d7sh")
-
 [node name="TheCharacter" type="RigidBody2D" parent="."]
-position = Vector2(0, -296)
 mass = 10.0
 gravity_scale = 0.0
 script = ExtResource("2_0e48y")
@@ -119,6 +107,7 @@ scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
 
 [node name="PointLight2D" type="PointLight2D" parent="TheCharacter"]
+visible = false
 position = Vector2(-1.99999, 4)
 scale = Vector2(1000, 1000)
 blend_mode = 2
@@ -140,8 +129,24 @@ material = SubResource("ShaderMaterial_d21ai")
 position = Vector2(6, -16)
 mesh = SubResource("QuadMesh_rj586")
 
+[node name="Label" type="Label" parent="TheCamera"]
+offset_left = -552.0
+offset_top = -300.0
+offset_right = -397.0
+offset_bottom = -231.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_outline_size = 4
+theme_override_font_sizes/font_size = 50
+text = "60 FPS"
+script = ExtResource("5_d21ai")
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCamera"]
 shape = SubResource("CircleShape2D_q6r6c")
+
+[node name="TheGenerator" type="Node2D" parent="."]
+script = ExtResource("8_rj586")
+_spawnNoise = SubResource("FastNoiseLite_d21ai")
 
 [connection signal="InputForceApplied" from="TheCharacter" to="TheCharacter/Triangle" method="OnInputForceApplied"]
 [connection signal="PositionUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterPositionUpdated"]

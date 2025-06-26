@@ -47,7 +47,7 @@ public partial class TheCharacter : RigidBody2D
         var radius = GlobalPosition.Length();
         var forceMagnitude = gravitationalConstant * meteorMass * characterMass / (radius * radius);
 
-        ApplyCentralForce(forceMagnitude * forceDir);
+        // ApplyCentralForce(forceMagnitude * forceDir);
         var inputForce = 1.0f * _mouseUpdate;
         ApplyCentralForce(inputForce);
         
