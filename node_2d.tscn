@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=17 format=3 uid="uid://d01ygggpfvijv"]
 
 [ext_resource type="Script" uid="uid://cwndrwkqshltx" path="res://TheCharacter.cs" id="2_0e48y"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
@@ -6,71 +6,29 @@
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
 [ext_resource type="Script" uid="uid://clq2dmvmxom14" path="res://FPSLabel.cs" id="5_d21ai"]
 [ext_resource type="Script" uid="uid://dugyqund6lcdy" path="res://TheCamera.cs" id="6_kdubu"]
+[ext_resource type="Script" uid="uid://6awa4kqolv4g" path="res://Background.cs" id="8_4d7sh"]
 [ext_resource type="Script" uid="uid://s4f1rgd0cdvy" path="res://TheGenerator.cs" id="8_rj586"]
 
-[sub_resource type="Gradient" id="Gradient_q6r6c"]
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_4d7sh"]
+radius = 20.0
+height = 80.0
+
+[sub_resource type="Gradient" id="Gradient_rj586"]
 offsets = PackedFloat32Array(1)
-colors = PackedColorArray(0.560955, 0.560955, 0.560955, 1)
+colors = PackedColorArray(0.983939, 0, 0.431755, 1)
 
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_kdubu"]
-gradient = SubResource("Gradient_q6r6c")
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_4d7sh"]
+gradient = SubResource("Gradient_rj586")
 
-[sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_yghvc"]
-output_port_for_preview = 0
-expanded_output_ports = [0]
-texture = ExtResource("3_epypp")
-
-[sub_resource type="VisualShader" id="VisualShader_0hol4"]
-code = "shader_type canvas_item;
-render_mode blend_mix;
-
-uniform sampler2D tex_frg_3;
-
-
-
-void fragment() {
-// Texture2D:3
-	vec4 n_out3p0 = texture(tex_frg_3, UV);
-
-
-// Output:0
-	COLOR.rgb = vec3(n_out3p0.xyz);
-
-
-}
-"
-graph_offset = Vector2(-379.774, 33.1303)
-mode = 1
-flags/light_only = false
-nodes/fragment/3/node = SubResource("VisualShaderNodeTexture_yghvc")
-nodes/fragment/3/position = Vector2(40, 140)
-nodes/fragment/connections = PackedInt32Array(3, 0, 0, 0)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_kdubu"]
-shader = SubResource("VisualShader_0hol4")
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
-size = Vector2(70, 70)
-
-[sub_resource type="Gradient" id="Gradient_kdubu"]
-offsets = PackedFloat32Array(0, 0.654481)
-colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_d21ai"]
-gradient = SubResource("Gradient_kdubu")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
-shader = ExtResource("2_q6r6c")
-
-[sub_resource type="QuadMesh" id="QuadMesh_rj586"]
-size = Vector2(2048, 2048)
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_rj586"]
+radius = 20.0
+height = 80.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_d21ai"]
 noise_type = 2
+frequency = 0.005
 fractal_type = 0
 fractal_gain = 0.2
 domain_warp_type = 2
@@ -78,20 +36,24 @@ domain_warp_amplitude = 5.0
 domain_warp_fractal_type = 2
 domain_warp_fractal_octaves = 2
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
+shader = ExtResource("2_q6r6c")
+
+[sub_resource type="QuadMesh" id="QuadMesh_rj586"]
+size = Vector2(2048, 2048)
+
 [node name="Node2D" type="Node2D"]
 
 [node name="TheCharacter" type="RigidBody2D" parent="."]
-mass = 10.0
-gravity_scale = 0.0
+mass = 160.0
 script = ExtResource("2_0e48y")
 
-[node name="Sprite2D" type="Sprite2D" parent="TheCharacter"]
-texture = SubResource("GradientTexture2D_kdubu")
+[node name="MeshInstance2D" type="MeshInstance2D" parent="TheCharacter"]
+mesh = SubResource("CapsuleMesh_4d7sh")
+texture = SubResource("GradientTexture1D_4d7sh")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCharacter"]
-material = SubResource("ShaderMaterial_kdubu")
-shape = SubResource("RectangleShape2D_wtcfe")
-debug_color = Color(0, 0.595, 0.7, 0)
+shape = SubResource("CapsuleShape2D_rj586")
 
 [node name="Triangle" type="Node2D" parent="TheCharacter"]
 script = ExtResource("3_0hol4")
@@ -100,34 +62,33 @@ script = ExtResource("3_0hol4")
 scale = Vector2(1, 0.2)
 
 [node name="TriangleSprite" type="Sprite2D" parent="TheCharacter/Triangle/Node2D"]
-modulate = Color(1, 0, 0.416667, 1)
+modulate = Color(0.409066, 1, 0.75717, 1)
 texture_filter = 1
 rotation = -2.35619
 scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
 
-[node name="PointLight2D" type="PointLight2D" parent="TheCharacter"]
-visible = false
-position = Vector2(-1.99999, 4)
-scale = Vector2(1000, 1000)
-blend_mode = 2
-texture = SubResource("GradientTexture2D_d21ai")
+[node name="HorizontalTriangle" type="Node2D" parent="TheCharacter"]
+script = ExtResource("3_0hol4")
+
+[node name="Node2D" type="Node2D" parent="TheCharacter/HorizontalTriangle"]
+scale = Vector2(1, 0.2)
+
+[node name="TriangleSprite" type="Sprite2D" parent="TheCharacter/HorizontalTriangle/Node2D"]
+modulate = Color(0.41, 0.724667, 1, 1)
+texture_filter = 1
+rotation = -2.35619
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("3_epypp")
 
 [node name="TheCamera" type="RigidBody2D" parent="."]
-position = Vector2(0, -270)
 collision_layer = 0
 collision_mask = 0
 gravity_scale = 0.0
 script = ExtResource("6_kdubu")
 
 [node name="Camera2D" type="Camera2D" parent="TheCamera"]
-
-[node name="Background" type="MeshInstance2D" parent="TheCamera/Camera2D"]
-light_mask = 0
-z_index = -1
-material = SubResource("ShaderMaterial_d21ai")
-position = Vector2(6, -16)
-mesh = SubResource("QuadMesh_rj586")
+ignore_rotation = false
 
 [node name="Label" type="Label" parent="TheCamera"]
 offset_left = -552.0
@@ -148,5 +109,15 @@ shape = SubResource("CircleShape2D_q6r6c")
 script = ExtResource("8_rj586")
 _spawnNoise = SubResource("FastNoiseLite_d21ai")
 
+[node name="Background" type="MeshInstance2D" parent="."]
+light_mask = 0
+z_index = -1
+material = SubResource("ShaderMaterial_d21ai")
+mesh = SubResource("QuadMesh_rj586")
+script = ExtResource("8_4d7sh")
+
 [connection signal="InputForceApplied" from="TheCharacter" to="TheCharacter/Triangle" method="OnInputForceApplied"]
+[connection signal="InputTorqueApplied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="OnInputTorqueApplied"]
 [connection signal="PositionUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterPositionUpdated"]
+[connection signal="RotationUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterRotationUpdated"]
+[connection signal="PositionUpdated" from="TheCamera" to="Background" method="OnCameraPositionUpdated"]

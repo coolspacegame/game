@@ -17,7 +17,6 @@ public partial class TheAsteroid : Node2D
 {
 
     private MeshInstance2D _meshNode;
-
     
     public TheAsteroid()
     {
@@ -27,7 +26,7 @@ public partial class TheAsteroid : Node2D
     }
 
 
-    public void GenerateMesh(IEnumerable<Vector2I> tileCoords, float squareTileSize)
+    public void GenerateMesh(IEnumerable<Vector2I> tileCoords, float squareTileSize, Vector2 asteroidOrigin)
     {
         // Generate two mesh triangles for every tile
         // TODO do this more efficiently, reuse vertices
@@ -37,12 +36,12 @@ public partial class TheAsteroid : Node2D
         
         foreach (var tileV in tileCoords)
         {
-            verticesList.Add(squareTileSize * new Vector2(tileV.X, tileV.Y));
-            verticesList.Add(squareTileSize * new Vector2(tileV.X, tileV.Y + 1));
-            verticesList.Add(squareTileSize * new Vector2(tileV.X + 1, tileV.Y + 1));
-            verticesList.Add(squareTileSize * new Vector2(tileV.X, tileV.Y));
-            verticesList.Add(squareTileSize * new Vector2(tileV.X + 1, tileV.Y + 1));
-            verticesList.Add(squareTileSize * new Vector2(tileV.X + 1, tileV.Y));
+            verticesList.Add(squareTileSize * new Vector2(tileV.X, tileV.Y) - asteroidOrigin);
+            verticesList.Add(squareTileSize * new Vector2(tileV.X, tileV.Y + 1) - asteroidOrigin);
+            verticesList.Add(squareTileSize * new Vector2(tileV.X + 1, tileV.Y + 1) - asteroidOrigin);
+            verticesList.Add(squareTileSize * new Vector2(tileV.X, tileV.Y) - asteroidOrigin);
+            verticesList.Add(squareTileSize * new Vector2(tileV.X + 1, tileV.Y + 1) - asteroidOrigin);
+            verticesList.Add(squareTileSize * new Vector2(tileV.X + 1, tileV.Y) - asteroidOrigin);
         }
         
         

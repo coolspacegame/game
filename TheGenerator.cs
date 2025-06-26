@@ -54,7 +54,7 @@ public partial class TheGenerator : Node2D
         // while there's still possible asteroids to generate
         while (fineGridTiles.Count > 0)
         {
-            var asteroidTiles = new HashSet<Vector2I>();
+            var asteroidTiles = new List<Vector2I>();
 
             var e = fineGridTiles.GetEnumerator();
             e.MoveNext();
@@ -66,7 +66,7 @@ public partial class TheGenerator : Node2D
             var noise = p.NoiseSource.GetNoise2Dv(worldPos);
             
             // repeat until there's a valid seed
-            while ( !noiseInRange.Invoke(noise) || !chunkBounds.HasPoint(worldPos))
+            while ( !noiseInRange(noise) || !chunkBounds.HasPoint(worldPos))
             {
                 fineGridTiles.Remove(coord);
                 
@@ -87,8 +87,6 @@ public partial class TheGenerator : Node2D
             // if we made it this far, we have an asteroid seed
             
             // asteroidTiles.Add(coord);
-            AddChild(new TheAsteroid());
-            var asteroid = GetChild<TheAsteroid>(GetChildCount() - 1);
     
             var stack = new List<Vector2I>();
             var visited = new HashSet<Vector2I>();
@@ -127,19 +125,62 @@ public partial class TheGenerator : Node2D
                 }
             }
 
+            var maxCorner = new Vector2(float.MinValue, float.MinValue);
+            var minCorner = new Vector2(float.MaxValue, float.MaxValue);
+            
             foreach (var t in visited)
             {
+                var v = new Vector2(t.X,  t.Y) * p.SquareTileSize;
+
+                if (v.X > maxCorner.X)
+                {
+                    maxCorner.X = v.X;
+                }
+                if (v.Y > maxCorner.Y)
+                {
+                    maxCorner.Y = v.Y;
+                }
+                if (v.X < minCorner.X)
+                {
+                    minCorner.X = v.X;
+                }
+                if (v.Y < minCorner.Y)
+                {
+                    minCorner.Y = v.Y;
+                }
+                
                 asteroidTiles.Add(t);
             }
+
+            // easy way to clean up the noise
+            if (asteroidTiles.Count == 1)
+            {
+                continue;
+            }
             
-            asteroid.GenerateMesh(asteroidTiles, p.SquareTileSize);
+            var asteroid = new TheAsteroid();
+            var rigidBody = new RigidBody2D();
+            var collisionShape = new CollisionShape2D();
+
+            var shape = new RectangleShape2D();
+            shape.Size = maxCorner - minCorner;
+            collisionShape.Shape = shape;
+
+            var asteroidCenter = (maxCorner + minCorner) / 2;
             
-            asteroid.Transform = Transform.Translated(worldPos);
+            rigidBody.Mass = 10f * asteroidTiles.Count;
+            rigidBody.Transform = rigidBody.Transform.Translated(asteroidCenter);
+            
+            asteroid.GenerateMesh(asteroidTiles, p.SquareTileSize, asteroidCenter);
+            
+            rigidBody.AddChild(collisionShape);
+            rigidBody.AddChild(asteroid);
+            AddChild(rigidBody);
         }
     }
     public override void _Ready()
     {
-        const int size = 3;
+        const int size = 4;
         for (int i = -size/2; i < size/2; i++)
         {
             for (int j = -size/2; j < size/2; j++)
