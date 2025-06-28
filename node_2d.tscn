@@ -1,13 +1,13 @@
 [gd_scene load_steps=17 format=3 uid="uid://d01ygggpfvijv"]
 
-[ext_resource type="Script" uid="uid://rgflb6k6h6ef" path="res://TheCharacter.gd" id="1_rj586"]
-[ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
-[ext_resource type="Script" uid="uid://ddxlg4rwwjquh" path="res://Triangle.gd" id="2_rj586"]
+[ext_resource type="Script" uid="uid://rgflb6k6h6ef" path="res://scripts/TheCharacter.gd" id="1_rj586"]
+[ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://shaders/bg_shader.tres" id="2_q6r6c"]
+[ext_resource type="Script" uid="uid://ddxlg4rwwjquh" path="res://scripts/Triangle.gd" id="2_rj586"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
-[ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://TheCamera.gd" id="4_rj586"]
-[ext_resource type="Script" uid="uid://mt3ebexr2yyf" path="res://TheLabel.gd" id="5_4d7sh"]
-[ext_resource type="Script" uid="uid://bf2cimoge6xc1" path="res://TheGenerator.gd" id="7_4d7sh"]
-[ext_resource type="Script" uid="uid://cw2jpbgevioaq" path="res://Background.gd" id="8_4d7sh"]
+[ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://scripts/TheCamera.gd" id="4_rj586"]
+[ext_resource type="Script" uid="uid://mt3ebexr2yyf" path="res://scripts/TheLabel.gd" id="5_4d7sh"]
+[ext_resource type="Script" uid="uid://bf2cimoge6xc1" path="res://scripts/TheGenerator.gd" id="7_4d7sh"]
+[ext_resource type="Script" uid="uid://cw2jpbgevioaq" path="res://scripts/Background.gd" id="8_4d7sh"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_4d7sh"]
 radius = 20.0
