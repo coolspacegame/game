@@ -1,13 +1,13 @@
 [gd_scene load_steps=17 format=3 uid="uid://d01ygggpfvijv"]
 
-[ext_resource type="Script" uid="uid://cwndrwkqshltx" path="res://TheCharacter.cs" id="2_0e48y"]
+[ext_resource type="Script" uid="uid://rgflb6k6h6ef" path="res://TheCharacter.gd" id="1_rj586"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
-[ext_resource type="Script" uid="uid://d3esgv0nox1yx" path="res://Triangle.cs" id="3_0hol4"]
+[ext_resource type="Script" uid="uid://ddxlg4rwwjquh" path="res://Triangle.gd" id="2_rj586"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
-[ext_resource type="Script" uid="uid://clq2dmvmxom14" path="res://FPSLabel.cs" id="5_d21ai"]
-[ext_resource type="Script" uid="uid://dugyqund6lcdy" path="res://TheCamera.cs" id="6_kdubu"]
-[ext_resource type="Script" uid="uid://6awa4kqolv4g" path="res://Background.cs" id="8_4d7sh"]
-[ext_resource type="Script" uid="uid://s4f1rgd0cdvy" path="res://TheGenerator.cs" id="8_rj586"]
+[ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://TheCamera.gd" id="4_rj586"]
+[ext_resource type="Script" uid="uid://mt3ebexr2yyf" path="res://TheLabel.gd" id="5_4d7sh"]
+[ext_resource type="Script" uid="uid://bf2cimoge6xc1" path="res://TheGenerator.gd" id="7_4d7sh"]
+[ext_resource type="Script" uid="uid://cw2jpbgevioaq" path="res://Background.gd" id="8_4d7sh"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_4d7sh"]
 radius = 20.0
@@ -26,15 +26,9 @@ height = 80.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_d21ai"]
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_4d7sh"]
 noise_type = 2
-frequency = 0.005
 fractal_type = 0
-fractal_gain = 0.2
-domain_warp_type = 2
-domain_warp_amplitude = 5.0
-domain_warp_fractal_type = 2
-domain_warp_fractal_octaves = 2
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
 shader = ExtResource("2_q6r6c")
@@ -46,7 +40,7 @@ size = Vector2(2048, 2048)
 
 [node name="TheCharacter" type="RigidBody2D" parent="."]
 mass = 160.0
-script = ExtResource("2_0e48y")
+script = ExtResource("1_rj586")
 
 [node name="MeshInstance2D" type="MeshInstance2D" parent="TheCharacter"]
 mesh = SubResource("CapsuleMesh_4d7sh")
@@ -56,7 +50,7 @@ texture = SubResource("GradientTexture1D_4d7sh")
 shape = SubResource("CapsuleShape2D_rj586")
 
 [node name="Triangle" type="Node2D" parent="TheCharacter"]
-script = ExtResource("3_0hol4")
+script = ExtResource("2_rj586")
 
 [node name="Node2D" type="Node2D" parent="TheCharacter/Triangle"]
 scale = Vector2(1, 0.2)
@@ -69,7 +63,7 @@ scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
 
 [node name="HorizontalTriangle" type="Node2D" parent="TheCharacter"]
-script = ExtResource("3_0hol4")
+script = ExtResource("2_rj586")
 
 [node name="Node2D" type="Node2D" parent="TheCharacter/HorizontalTriangle"]
 scale = Vector2(1, 0.2)
@@ -85,7 +79,7 @@ texture = ExtResource("3_epypp")
 collision_layer = 0
 collision_mask = 0
 gravity_scale = 0.0
-script = ExtResource("6_kdubu")
+script = ExtResource("4_rj586")
 
 [node name="Camera2D" type="Camera2D" parent="TheCamera"]
 ignore_rotation = false
@@ -100,14 +94,14 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/shadow_outline_size = 4
 theme_override_font_sizes/font_size = 50
 text = "60 FPS"
-script = ExtResource("5_d21ai")
+script = ExtResource("5_4d7sh")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCamera"]
 shape = SubResource("CircleShape2D_q6r6c")
 
 [node name="TheGenerator" type="Node2D" parent="."]
-script = ExtResource("8_rj586")
-_spawnNoise = SubResource("FastNoiseLite_d21ai")
+script = ExtResource("7_4d7sh")
+_spawn_noise = SubResource("FastNoiseLite_4d7sh")
 
 [node name="Background" type="MeshInstance2D" parent="."]
 light_mask = 0
@@ -116,8 +110,8 @@ material = SubResource("ShaderMaterial_d21ai")
 mesh = SubResource("QuadMesh_rj586")
 script = ExtResource("8_4d7sh")
 
-[connection signal="InputForceApplied" from="TheCharacter" to="TheCharacter/Triangle" method="OnInputForceApplied"]
-[connection signal="InputTorqueApplied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="OnInputTorqueApplied"]
-[connection signal="PositionUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterPositionUpdated"]
-[connection signal="RotationUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterRotationUpdated"]
-[connection signal="PositionUpdated" from="TheCamera" to="Background" method="OnCameraPositionUpdated"]
+[connection signal="input_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
+[connection signal="input_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]
+[connection signal="position_updated" from="TheCharacter" to="TheCamera" method="on_character_position_updated"]
+[connection signal="rotation_updated" from="TheCharacter" to="TheCamera" method="on_character_rotation_updated"]
+[connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]
