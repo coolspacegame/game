@@ -1,74 +1,34 @@
-[gd_scene load_steps=22 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=17 format=3 uid="uid://d01ygggpfvijv"]
 
-[ext_resource type="Texture2D" uid="uid://do55u06js8o50" path="res://img/sphere.png" id="1_d21ai"]
-[ext_resource type="Script" uid="uid://cwndrwkqshltx" path="res://TheCharacter.cs" id="2_0e48y"]
+[ext_resource type="Script" uid="uid://rgflb6k6h6ef" path="res://TheCharacter.gd" id="1_rj586"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://bg_shader.tres" id="2_q6r6c"]
-[ext_resource type="Texture2D" uid="uid://i1xtnpthr1uw" path="res://img/sphere-norm.png" id="2_rj586"]
-[ext_resource type="Script" uid="uid://d3esgv0nox1yx" path="res://Triangle.cs" id="3_0hol4"]
+[ext_resource type="Script" uid="uid://ddxlg4rwwjquh" path="res://Triangle.gd" id="2_rj586"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
-[ext_resource type="Script" uid="uid://dugyqund6lcdy" path="res://TheCamera.cs" id="6_kdubu"]
+[ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://TheCamera.gd" id="4_rj586"]
+[ext_resource type="Script" uid="uid://mt3ebexr2yyf" path="res://TheLabel.gd" id="5_4d7sh"]
+[ext_resource type="Script" uid="uid://bf2cimoge6xc1" path="res://TheGenerator.gd" id="7_4d7sh"]
+[ext_resource type="Script" uid="uid://cw2jpbgevioaq" path="res://Background.gd" id="8_4d7sh"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_0e48y"]
-radius = 200.0
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_4d7sh"]
+radius = 20.0
+height = 80.0
 
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_rj586"]
-
-[sub_resource type="CanvasTexture" id="CanvasTexture_4d7sh"]
-diffuse_texture = ExtResource("1_d21ai")
-normal_texture = ExtResource("2_rj586")
-
-[sub_resource type="Gradient" id="Gradient_q6r6c"]
+[sub_resource type="Gradient" id="Gradient_rj586"]
 offsets = PackedFloat32Array(1)
-colors = PackedColorArray(0.560955, 0.560955, 0.560955, 1)
+colors = PackedColorArray(0.983939, 0, 0.431755, 1)
 
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_kdubu"]
-gradient = SubResource("Gradient_q6r6c")
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_4d7sh"]
+gradient = SubResource("Gradient_rj586")
 
-[sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_yghvc"]
-output_port_for_preview = 0
-expanded_output_ports = [0]
-texture = ExtResource("3_epypp")
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_rj586"]
+radius = 20.0
+height = 80.0
 
-[sub_resource type="VisualShader" id="VisualShader_0hol4"]
-code = "shader_type canvas_item;
-render_mode blend_mix;
+[sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
 
-uniform sampler2D tex_frg_3;
-
-
-
-void fragment() {
-// Texture2D:3
-	vec4 n_out3p0 = texture(tex_frg_3, UV);
-
-
-// Output:0
-	COLOR.rgb = vec3(n_out3p0.xyz);
-
-
-}
-"
-graph_offset = Vector2(-379.774, 33.1303)
-mode = 1
-flags/light_only = false
-nodes/fragment/3/node = SubResource("VisualShaderNodeTexture_yghvc")
-nodes/fragment/3/position = Vector2(40, 140)
-nodes/fragment/connections = PackedInt32Array(3, 0, 0, 0)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_kdubu"]
-shader = SubResource("VisualShader_0hol4")
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_wtcfe"]
-size = Vector2(70, 70)
-
-[sub_resource type="Gradient" id="Gradient_kdubu"]
-offsets = PackedFloat32Array(0, 0.654481)
-colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_d21ai"]
-gradient = SubResource("Gradient_kdubu")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_4d7sh"]
+noise_type = 2
+fractal_type = 0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
 shader = ExtResource("2_q6r6c")
@@ -76,72 +36,82 @@ shader = ExtResource("2_q6r6c")
 [sub_resource type="QuadMesh" id="QuadMesh_rj586"]
 size = Vector2(2048, 2048)
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
-
 [node name="Node2D" type="Node2D"]
 
-[node name="TheEnvironment" type="StaticBody2D" parent="."]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TheEnvironment"]
-shape = SubResource("CircleShape2D_0e48y")
-
-[node name="Circle" type="Sprite2D" parent="TheEnvironment"]
-material = SubResource("CanvasItemMaterial_rj586")
-position = Vector2(1, 0)
-scale = Vector2(0.38, 0.38)
-texture = SubResource("CanvasTexture_4d7sh")
-
 [node name="TheCharacter" type="RigidBody2D" parent="."]
-position = Vector2(0, -296)
-mass = 10.0
-gravity_scale = 0.0
-script = ExtResource("2_0e48y")
+mass = 160.0
+script = ExtResource("1_rj586")
 
-[node name="Sprite2D" type="Sprite2D" parent="TheCharacter"]
-texture = SubResource("GradientTexture2D_kdubu")
+[node name="MeshInstance2D" type="MeshInstance2D" parent="TheCharacter"]
+mesh = SubResource("CapsuleMesh_4d7sh")
+texture = SubResource("GradientTexture1D_4d7sh")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCharacter"]
-material = SubResource("ShaderMaterial_kdubu")
-shape = SubResource("RectangleShape2D_wtcfe")
-debug_color = Color(0, 0.595, 0.7, 0)
+shape = SubResource("CapsuleShape2D_rj586")
 
 [node name="Triangle" type="Node2D" parent="TheCharacter"]
-script = ExtResource("3_0hol4")
+script = ExtResource("2_rj586")
 
 [node name="Node2D" type="Node2D" parent="TheCharacter/Triangle"]
 scale = Vector2(1, 0.2)
 
 [node name="TriangleSprite" type="Sprite2D" parent="TheCharacter/Triangle/Node2D"]
-modulate = Color(1, 0, 0.416667, 1)
+modulate = Color(0.409066, 1, 0.75717, 1)
 texture_filter = 1
 rotation = -2.35619
 scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
 
-[node name="PointLight2D" type="PointLight2D" parent="TheCharacter"]
-position = Vector2(-1.99999, 4)
-scale = Vector2(1000, 1000)
-blend_mode = 2
-texture = SubResource("GradientTexture2D_d21ai")
+[node name="HorizontalTriangle" type="Node2D" parent="TheCharacter"]
+script = ExtResource("2_rj586")
+
+[node name="Node2D" type="Node2D" parent="TheCharacter/HorizontalTriangle"]
+scale = Vector2(1, 0.2)
+
+[node name="TriangleSprite" type="Sprite2D" parent="TheCharacter/HorizontalTriangle/Node2D"]
+modulate = Color(0.41, 0.724667, 1, 1)
+texture_filter = 1
+rotation = -2.35619
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("3_epypp")
 
 [node name="TheCamera" type="RigidBody2D" parent="."]
-position = Vector2(0, -270)
 collision_layer = 0
 collision_mask = 0
 gravity_scale = 0.0
-script = ExtResource("6_kdubu")
+script = ExtResource("4_rj586")
 
 [node name="Camera2D" type="Camera2D" parent="TheCamera"]
+ignore_rotation = false
 
-[node name="Background" type="MeshInstance2D" parent="TheCamera/Camera2D"]
-light_mask = 0
-z_index = -1
-material = SubResource("ShaderMaterial_d21ai")
-position = Vector2(6, -16)
-mesh = SubResource("QuadMesh_rj586")
+[node name="Label" type="Label" parent="TheCamera"]
+offset_left = -552.0
+offset_top = -300.0
+offset_right = -397.0
+offset_bottom = -231.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_outline_size = 4
+theme_override_font_sizes/font_size = 50
+text = "60 FPS"
+script = ExtResource("5_4d7sh")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCamera"]
 shape = SubResource("CircleShape2D_q6r6c")
 
-[connection signal="InputForceApplied" from="TheCharacter" to="TheCharacter/Triangle" method="OnInputForceApplied"]
-[connection signal="PositionUpdated" from="TheCharacter" to="TheCamera" method="OnCharacterPositionUpdated"]
+[node name="TheGenerator" type="Node2D" parent="."]
+script = ExtResource("7_4d7sh")
+_spawn_noise = SubResource("FastNoiseLite_4d7sh")
+
+[node name="Background" type="MeshInstance2D" parent="."]
+light_mask = 0
+z_index = -1
+material = SubResource("ShaderMaterial_d21ai")
+mesh = SubResource("QuadMesh_rj586")
+script = ExtResource("8_4d7sh")
+
+[connection signal="input_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
+[connection signal="input_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]
+[connection signal="position_updated" from="TheCharacter" to="TheCamera" method="on_character_position_updated"]
+[connection signal="rotation_updated" from="TheCharacter" to="TheCamera" method="on_character_rotation_updated"]
+[connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]
