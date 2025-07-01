@@ -8,6 +8,8 @@ signal rotation_updated(rotation: float)
 var _mouse_update: Vector2 = Vector2.ZERO
 var _input_dir_state: Vector2i = Vector2i.ZERO
 var _mouse_button_pressed: bool = false
+var touch_start_position: Vector2 = Vector2.ZERO
+var touch_was_pressed: bool = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
@@ -29,17 +31,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			clamp(_input_dir_state.x, -1, 1),
 			clamp(_input_dir_state.y, -1, 1)
 		)
-		
-	elif event is InputEventScreenTouch:
-		if event.pressed:
-			var p = event.position - get_viewport().size / 2 
+	elif event is InputEventScreenDrag:
+		if touch_was_pressed:
+			var p = event.position - touch_start_position - Vector2(get_viewport().size) / 2 
 			var new_state = Vector2i(0, 0)
-			if abs(p.x) > 0.1:
+			if abs(p.x) > 100:
 				new_state += Vector2i(1 if p.x > 0 else -1, 0)
-			if abs(p.y) > 0.1:			
+			if abs(p.y) > 100:
 				new_state += Vector2i(0, 1 if p.y > 0 else -1)
 			_input_dir_state = new_state
+	elif event is InputEventScreenTouch:
+		if event.pressed:
+			if touch_was_pressed:
+				pass
+			else:
+				touch_start_position = event.position - Vector2(get_viewport().size) / 2 
+				touch_was_pressed = true
 		else:
+			touch_was_pressed = false
 			_input_dir_state = Vector2i(0,0)
 
 func _process(delta: float) -> void:

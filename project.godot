@@ -33,5 +33,19 @@ version_control/autoload_on_startup=true
 [rendering]
 
 textures/canvas_textures/default_texture_filter=2
+renderer/rendering_method="forward_plus"
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_2d=1
+
+[xogot]
+
+project/editorState=[{
+"column": 20,
+"current": true,
+"line": 39,
+"path": "res://scripts/TheCharacter.gd",
+"type": "file"
+}]
+project/breakpoints={
+"res://scripts/TheCharacter.gd": PackedInt32Array()
+}
