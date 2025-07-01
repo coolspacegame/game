@@ -29,6 +29,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			clamp(_input_dir_state.x, -1, 1),
 			clamp(_input_dir_state.y, -1, 1)
 		)
+		
+	elif event is InputEventScreenTouch:
+		if event.pressed:
+			var p = event.position - get_viewport().size / 2 
+			var new_state = Vector2i(0, 0)
+			if abs(p.x) > 0.1:
+				new_state += Vector2i(1 if p.x > 0 else -1, 0)
+			if abs(p.y) > 0.1:			
+				new_state += Vector2i(0, 1 if p.y > 0 else -1)
+			_input_dir_state = new_state
+		else:
+			_input_dir_state = Vector2i(0,0)
 
 func _process(delta: float) -> void:
 	pass

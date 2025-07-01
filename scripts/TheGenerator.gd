@@ -2,15 +2,13 @@ extends Node2D
 
 # @export var _noise: FastNoiseLite
 @export var _spawn_noise: FastNoiseLite
+var generated_chunks := {}
+var generated_tiles := {}
 
 const SQUARE_CHUNK_SIZE := 512.0
 
-# const ASTEROID_RADIUS := SQUARE_CHUNK_SIZE / 10.0
-
 # How many times the chunk is subdivided to get the fine grid
 const FINE_GRID_DEPTH := 5
-
-# const SEARCH_DEPTH := 2
 
 func generate_chunk(chunk_coord: Vector2i) -> void:
 	# chunk location in world coordinates
@@ -29,6 +27,11 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 	p.noise_min = -1.0
 	p.noise_max = -0.65
 	p.noise_source = _spawn_noise
+
+	# we are assuming that the chunk doesn't already exist for now
+	assert(chunk_coord not in generated_chunks.keys())
+
+	generated_chunks[chunk_coord] = []
 
 	var noise_in_range = func(noise: float) -> bool:
 		return noise > p.noise_min and noise < p.noise_max
@@ -50,7 +53,7 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 		var noise = p.noise_source.get_noise_2d(world_pos.x, world_pos.y)
 
 		# repeat until there's a valid seed
-		while not noise_in_range.call(noise) or not chunk_bounds.has_point(world_pos):
+		while not noise_in_range.call(noise) or coord in generated_tiles.keys():
 			fine_grid_tiles.erase(coord)
 			# if there's no tiles left to check, then there's no valid asteroid seeds and the chunk is finished
 			if fine_grid_tiles.size() == 0:
@@ -64,8 +67,6 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 
 		# if we made it this far, we have an asteroid seed
 
-		# asteroid_tiles.append(coord)
-
 		var stack := [coord]
 		var visited := {}
 
@@ -74,7 +75,9 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 		while stack.size() > 0:
 			current = stack[-1]
 			visited[current] = true
-			fine_grid_tiles.erase(current)
+
+			if current in  fine_grid_tiles.keys():
+				fine_grid_tiles.erase(current)
 			stack.pop_back()
 
 			var directions = [
@@ -85,10 +88,14 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 			]
 			for d in directions:
 				var neighbor = current + d
-				var pos_world = p.square_tile_size * Vector2(neighbor.x, neighbor.y)
+				var pos_world = Vector2(neighbor.x, neighbor.y) * fine_grid_size + Vector2.ONE * fine_grid_size / 2.0
 				noise = p.noise_source.get_noise_2d(pos_world.x, pos_world.y)
-				if fine_grid_tiles.has(neighbor) and not visited.has(neighbor) and noise_in_range.call(noise) and chunk_bounds.has_point(pos_world):
+				if not visited.has(neighbor) and noise_in_range.call(noise):
 					stack.append(neighbor)
+				
+					# if neighbor in generated_tiles.keys():
+					# 	assert(generated_tiles[neighbor] != chunk_coord)
+					# else:
 
 		var max_corner = Vector2(-INF, -INF)
 		var min_corner = Vector2(INF, INF)
@@ -103,6 +110,11 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 				min_corner.x = v.x
 			if v.y < min_corner.y:
 				min_corner.y = v.y
+
+			generated_chunks[chunk_coord].append(t)
+
+			assert(t not in generated_tiles.keys())
+			generated_tiles[t] = chunk_coord
 
 			asteroid_tiles.append(t)
 
@@ -128,6 +140,7 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 		rigid_body.add_child(collision_shape)
 		rigid_body.add_child(asteroid)
 		add_child(rigid_body)
+
 
 func _ready() -> void:
 	const SIZE := 4
