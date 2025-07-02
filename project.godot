@@ -33,6 +33,10 @@ version_control/autoload_on_startup=true
 2d/physics_engine="GodotPhysics2D"
 2d/default_gravity=0.0
 2d/default_gravity_vector=Vector2(0, 0)
+2d/default_linear_damp=0.0
+2d/default_angular_damp=0.0
+2d/sleep_threshold_linear=1.0
+2d/time_before_sleep=1.0
 
 [rendering]
 

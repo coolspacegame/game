@@ -11,6 +11,8 @@ var _mouse_button_pressed: bool = false
 var touch_start_position: Vector2 = Vector2.ZERO
 var touch_was_pressed: bool = false
 
+var asteroid_bodies: Array[RigidBody2D]
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		if _mouse_button_pressed:
@@ -51,25 +53,35 @@ func _unhandled_input(event: InputEvent) -> void:
 			touch_was_pressed = false
 			_input_dir_state = Vector2i(0,0)
 
+func _on_asteroid_body_created(body: RigidBody2D):
+	asteroid_bodies.append(body)
+
+func _ready() -> void:
+	asteroid_bodies = []
+
 func _process(delta: float) -> void:
 	pass
 
 func _physics_process(delta: float) -> void:
 	# const meteor_mass := 5000000.0
 	# const character_mass := 1.0
-	# const gravitational_constant := 10.0
+	const gravitational_constant := 100.0
 
-	# var force_dir := -1.0 * global_position.normalized()
-	# var radius := global_position.length()
-	# var force_magnitude := gravitational_constant * meteor_mass * character_mass / (radius * radius)
-	# apply_central_force(force_magnitude * force_dir)
-	# var input_force := 1.0 * _mouse_update
+	# TODO make this more efficient by only going through the asteroids that are close by
+	for body in asteroid_bodies:
+		var asteroid_mass := body.mass
+		var character_mass := mass
+		
+		var radius := (body.global_position - global_position).length()
+		var force_magnitude := gravitational_constant * asteroid_mass * character_mass / (radius * radius)
+		var force_dir := (body.global_position - global_position).normalized()
+		apply_central_force(force_magnitude * force_dir)
 
-	var input_force := 50000.0 * _input_dir_state.y * Vector2.UP
+	var input_force := 20000.0 * _input_dir_state.y * Vector2.UP
 	input_force = transform.basis_xform(input_force).rotated(PI)
 	apply_central_force(input_force)
 
-	var input_torque := 200000.0 * _input_dir_state.x
+	var input_torque := 100000.0 * _input_dir_state.x
 	apply_torque(input_torque)
 
 	emit_signal("input_torque_applied", input_torque)

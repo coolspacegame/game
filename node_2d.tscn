@@ -26,11 +26,13 @@ gradient = SubResource("Gradient_rj586")
 radius = 20.0
 height = 80.0
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_4d7sh"]
-noise_type = 2
-frequency = 0.0004
-fractal_type = 0
-cellular_jitter = 0.5
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ir8iy"]
+noise_type = 0
+frequency = 0.001
+fractal_octaves = 4
+fractal_gain = 1.0
+fractal_weighted_strength = 0.46
+domain_warp_fractal_octaves = 2
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
 shader = ExtResource("2_q6r6c")
@@ -72,7 +74,9 @@ gradient = SubResource("Gradient_ir8iy")
 [node name="Node2D" type="Node2D"]
 
 [node name="TheCharacter" type="RigidBody2D" parent="."]
-mass = 160.0
+mass = 100.0
+angular_damp_mode = 1
+angular_damp = 1.0
 script = ExtResource("1_rj586")
 
 [node name="MeshInstance2D" type="MeshInstance2D" parent="TheCharacter"]
@@ -110,7 +114,7 @@ texture = ExtResource("3_epypp")
 
 [node name="TheGenerator" type="Node2D" parent="."]
 script = ExtResource("7_4d7sh")
-additive_noise = Array[FastNoiseLite]([SubResource("FastNoiseLite_4d7sh")])
+detail_noise = SubResource("FastNoiseLite_ir8iy")
 
 [node name="Background" type="MeshInstance2D" parent="."]
 light_mask = 0
@@ -200,5 +204,7 @@ asteroid_texture = SubResource("GradientTexture1D_hqns4")
 [connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_position_updated"]
 [connection signal="rotation_updated" from="TheCharacter" to="TheCamera" method="on_character_rotation_updated"]
 [connection signal="rotation_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_rotation_updated"]
-[connection signal="asteroid_mesh_updated" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_updated"]
+[connection signal="asteroid_body_created" from="TheGenerator" to="TheCharacter" method="_on_asteroid_body_created"]
+[connection signal="asteroid_mesh_created" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_created"]
+[connection signal="asteroid_transform_updated" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_transform_updated"]
 [connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]
