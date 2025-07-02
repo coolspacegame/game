@@ -3,7 +3,7 @@ class_name TheAsteroid
 extends Node2D
 
 class GenerateParameters:
-	var noise_source: Noise
+	# var noise_source: Noise
 	var noise_min: float
 	var noise_max: float
 	var square_tile_size: float
@@ -15,12 +15,12 @@ class Tile:
 
 
 
-var _mesh_node: MeshInstance2D
+var mesh_node: MeshInstance2D
 
 func _init():
 	var m = MeshInstance2D.new()
 	add_child(m)
-	_mesh_node = get_child(0)
+	mesh_node = get_child(0)
 
 func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin: Vector2) -> void:
 	# Generate two mesh triangles for every tile
@@ -43,4 +43,4 @@ func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin:
 	arrays[Mesh.ARRAY_VERTEX] = vertices_list
 
 	arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	_mesh_node.mesh = arr_mesh
+	mesh_node.mesh = arr_mesh
