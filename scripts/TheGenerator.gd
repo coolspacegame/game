@@ -7,6 +7,9 @@ extends Node2D
 
 signal asteroid_mesh_updated(mesh: Mesh, transform: Transform2D)
 
+class TileInfo:
+	var is_border_tile = false
+
 var generated_chunks := {}
 var generated_tiles := {}
 
@@ -89,7 +92,8 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 
 		while stack.size() > 0:
 			current = stack[-1]
-			visited[current] = true
+			var ti = TileInfo.new()
+			visited[current] = ti
 
 			if current in  fine_grid_tiles.keys():
 				fine_grid_tiles.erase(current)
@@ -101,13 +105,17 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 				Vector2i.RIGHT,
 				Vector2i.DOWN
 			]
+			var neighbor_count := 0
 			for d in directions:
 				var neighbor = current + d
 				var pos_world = Vector2(neighbor.x, neighbor.y) * fine_grid_size + Vector2.ONE * fine_grid_size / 2.0
 				noise = get_noise(pos_world)
 				if not visited.has(neighbor) and noise_in_range.call(noise):
 					stack.append(neighbor)
+					neighbor_count += 1
+
 				
+			visited[current].is_border_tile = neighbor_count < len(directions)
 
 		var max_corner = Vector2(-INF, -INF)
 		var min_corner = Vector2(INF, INF)
@@ -136,11 +144,7 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 
 		var asteroid = TheAsteroid.new()
 		var rigid_body = RigidBody2D.new()
-		var collision_shape = CollisionShape2D.new()
 
-		var shape = RectangleShape2D.new()
-		shape.size = max_corner - min_corner
-		collision_shape.shape = shape
 
 		var asteroid_center = (max_corner + min_corner) / 2.0
 
@@ -150,13 +154,16 @@ func generate_chunk(chunk_coord: Vector2i) -> void:
 		asteroid.generate_mesh(asteroid_tiles, p.square_tile_size, asteroid_center)
 		asteroid_mesh_updated.emit(asteroid.mesh_node.mesh, rigid_body.transform)
 
+		var collision_shape = CollisionShape2D.new()
+		collision_shape.shape = asteroid.collision_shape
+
 		rigid_body.add_child(collision_shape)
 		rigid_body.add_child(asteroid)
 		add_child(rigid_body)
 
 
 func _ready() -> void:
-	const SIZE := 5
+	const SIZE := 10
 	for i in range(-SIZE / 2, SIZE / 2):
 		for j in range(-SIZE / 2, SIZE / 2):
 			generate_chunk(Vector2i(i, j))

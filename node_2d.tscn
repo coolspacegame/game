@@ -28,7 +28,7 @@ height = 80.0
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_4d7sh"]
 noise_type = 2
-frequency = 0.0009
+frequency = 0.0004
 fractal_type = 0
 cellular_jitter = 0.5
 
@@ -119,8 +119,6 @@ material = SubResource("ShaderMaterial_d21ai")
 mesh = SubResource("QuadMesh_rj586")
 script = ExtResource("8_4d7sh")
 
-[node name="MeshInstance2D" type="MeshInstance2D" parent="."]
-
 [node name="TheCamera" type="RigidBody2D" parent="."]
 collision_layer = 0
 collision_mask = 0
@@ -195,9 +193,6 @@ script = ExtResource("11_hqns4")
 [node name="AsteroidDots" type="Node2D" parent="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld"]
 script = ExtResource("11_x0ka3")
 asteroid_texture = SubResource("GradientTexture1D_hqns4")
-
-[node name="Panel" type="Panel" parent="CanvasLayer/Container/HBoxContainer"]
-layout_mode = 2
 
 [connection signal="input_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
 [connection signal="input_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]

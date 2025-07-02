@@ -23,8 +23,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_input_dir_state += Vector2i.UP * (1 if event.pressed else -1)
 		elif event.keycode == KEY_A:
 			_input_dir_state += Vector2i.LEFT * (1 if event.pressed else -1)
-		elif event.keycode == KEY_S:
-			_input_dir_state += Vector2i.DOWN * (1 if event.pressed else -1)
+		# elif event.keycode == KEY_S:
+		# 	_input_dir_state += Vector2i.DOWN * (1 if event.pressed else -1)
 		elif event.keycode == KEY_D:
 			_input_dir_state += Vector2i.RIGHT * (1 if event.pressed else -1)
 		_input_dir_state = Vector2i(
