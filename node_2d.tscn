@@ -29,10 +29,8 @@ height = 80.0
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_ir8iy"]
 noise_type = 0
-frequency = 0.001
-fractal_octaves = 4
-fractal_gain = 1.0
-fractal_weighted_strength = 0.46
+frequency = 0.0051
+fractal_octaves = 3
 domain_warp_fractal_octaves = 2
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_hqns4"]
@@ -208,8 +206,8 @@ script = ExtResource("9_hqns4")
 [connection signal="input_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
 [connection signal="input_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]
 [connection signal="position_updated" from="TheCharacter" to="TheCamera" method="on_character_position_updated"]
-[connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/MinimapCamera" method="_on_character_position_updated"]
 [connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_position_updated"]
+[connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/MinimapCamera" method="_on_character_position_updated"]
 [connection signal="rotation_updated" from="TheCharacter" to="TheCamera" method="on_character_rotation_updated"]
 [connection signal="rotation_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_rotation_updated"]
 [connection signal="asteroid_body_created" from="TheGenerator" to="TheCharacter" method="_on_asteroid_body_created"]

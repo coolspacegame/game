@@ -20,7 +20,7 @@ var generated_tiles := {}
 const SQUARE_CHUNK_SIZE := 4096.0
 
 # How many times the chunk is subdivided to get the fine grid
-const FINE_GRID_DEPTH := 8
+const FINE_GRID_DEPTH := 7
 
 
 func rand_point_in_rect(rect_min: Vector2, rect_max: Vector2) -> Vector2:
@@ -76,27 +76,34 @@ func generate_chunk(chunk_coord: Vector2i):
 
 	for point in final_points:
 
-		var asteroid_tiles = {}
+		var asteroid_border_tiles = []
 
 		detail_noise.seed += 1
 
-		var noise_img = detail_noise.get_seamless_image(1000, 1)
 
-		for angle_inc in range(1000):
-			var angle = angle_inc / 1000.0 * 2 * PI
-			var noise = noise_img.get_pixel(angle_inc, 0).r
+
+		var angular_increment = asin(fine_grid_size / max_radius)
+		var num_angles = ceili(2 * PI / angular_increment);
+
+		var noise_img = detail_noise.get_seamless_image(num_angles, 1)
+
+		for i in range(num_angles):
+			var angle = i * angular_increment
+			var noise = noise_img.get_pixel(i, 0).r
 			noise = noise * 0.5 + 0.5
 			var max_distance = noise * max_radius * (size_noise.get_noise_2dv(point) + 1) / 2
 
-			for d in range(0.0, max_distance, fine_grid_size/2):
-				var new_point = d * Vector2(cos(angle), sin(angle)) + point
-				var new_tile = Vector2i(new_point / fine_grid_size)
-				asteroid_tiles[new_tile] = true
+			# for d in range(0.0, max_distance, fine_grid_size/2):
+			var new_point = max_distance * Vector2(cos(angle), sin(angle)) + point
+			var new_tile = Vector2i(new_point / fine_grid_size)
+
+			if i == 0 or asteroid_border_tiles[-1] != new_tile:
+				asteroid_border_tiles.append(new_tile)
 
 
 		var centroid = Vector2.ZERO
-		for tile in asteroid_tiles.keys():
-			centroid += Vector2(tile) * fine_grid_size / len(asteroid_tiles)
+		for tile in asteroid_border_tiles:
+			centroid += Vector2(tile) * fine_grid_size / len(asteroid_border_tiles)
 
 		var asteroid = TheAsteroid.new()
 		var rigid_body = RigidBody2D.new()
@@ -104,16 +111,22 @@ func generate_chunk(chunk_coord: Vector2i):
 
 		var asteroid_center = centroid
 
-		rigid_body.mass = 100.0 * asteroid_tiles.size()
+		rigid_body.mass = 200.0 * asteroid_border_tiles.size()
 		rigid_body.transform = rigid_body.transform.translated(asteroid_center)
 
-		asteroid.generate_mesh(asteroid_tiles.keys(), fine_grid_size, asteroid_center)
+		asteroid.generate_mesh(asteroid_border_tiles, fine_grid_size, asteroid_center)
 		asteroid_mesh_created.emit(asteroid.mesh_node.mesh)
 
-		var collision_shape = CollisionShape2D.new()
-		collision_shape.shape = asteroid.collision_shape
+		var p = asteroid.collision_polygon
+		var hulls = Geometry2D.decompose_polygon_in_convex(p)
+		for hull in hulls:
+			var collision_shape := CollisionShape2D.new()
+			collision_shape.shape = ConvexPolygonShape2D.new()
+			collision_shape.shape.points = hull
+			rigid_body.add_child(collision_shape)
 
-		rigid_body.add_child(collision_shape)
+		# collision_poly.polygon = Geometry2D.decompose_polygon_in_convex(p)
+
 		rigid_body.add_child(asteroid)
 
 		add_child(rigid_body)
@@ -140,9 +153,9 @@ func _process(delta: float) -> void:
 
 
 func _ready() -> void:
-	const SIZE := 5
-	for i in range(-SIZE / 2, SIZE / 2):
+	const SIZE := 3
 
+	for i in range(-SIZE / 2, SIZE / 2):
 		for j in range(-SIZE / 2, SIZE / 2):
 			var c = Vector2i(i, j)
 			# print_debug(c)

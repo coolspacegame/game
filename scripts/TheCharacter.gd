@@ -68,14 +68,14 @@ func _physics_process(delta: float) -> void:
 	const gravitational_constant := 100.0
 
 	# TODO make this more efficient by only going through the asteroids that are close by
-	for body in asteroid_bodies:
-		var asteroid_mass := body.mass
-		var character_mass := mass
+	# for body in asteroid_bodies:
+	# 	var asteroid_mass := body.mass
+	# 	var character_mass := mass
 		
-		var radius := (body.global_position - global_position).length()
-		var force_magnitude := gravitational_constant * asteroid_mass * character_mass / (radius * radius)
-		var force_dir := (body.global_position - global_position).normalized()
-		apply_central_force(force_magnitude * force_dir)
+	# 	var radius := (body.global_position - global_position).length()
+	# 	var force_magnitude := gravitational_constant * asteroid_mass * character_mass / (radius * radius)
+	# 	var force_dir := (body.global_position - global_position).normalized()
+	# 	apply_central_force(force_magnitude * force_dir)
 
 	var input_force := 20000.0 * _input_dir_state.y * Vector2.UP
 	input_force = transform.basis_xform(input_force).rotated(PI)
