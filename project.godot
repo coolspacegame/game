@@ -19,19 +19,31 @@ config/icon="res://icon.svg"
 
 project/assembly_name="spacegame"
 
-[editor]
-
-version_control/plugin_name="GitPlugin"
-version_control/autoload_on_startup=true
-
 [physics]
 
 2d/physics_engine="GodotPhysics2D"
 2d/default_gravity=0.0
 2d/default_gravity_vector=Vector2(0, 0)
+2d/default_linear_damp=0.0
+2d/default_angular_damp=0.0
+2d/sleep_threshold_linear=1.0
+2d/time_before_sleep=1.0
 
 [rendering]
 
 textures/canvas_textures/default_texture_filter=2
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_2d=1
+
+[xogot]
+
+project/editorState=[{
+"column": 20,
+"current": true,
+"line": 39,
+"path": "res://scripts/TheCharacter.gd",
+"type": "file"
+}]
+project/breakpoints={
+"res://scripts/TheCharacter.gd": PackedInt32Array()
+}

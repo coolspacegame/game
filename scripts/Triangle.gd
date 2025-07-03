@@ -1,6 +1,6 @@
 extends Node2D
 
-var _new_scale: Vector2 = Vector2.ONE
+# var _new_scale: Vector2 = Vector2.ONE
 
 func on_input_force_applied(force: Vector2) -> void:
 	# print(force.length())
@@ -27,5 +27,5 @@ func on_input_torque_applied(torque: float) -> void:
 
 	var new_scale = Vector2(clamp(scaled_torque, 0.0, 1.0), 1.0)
 	set_scale(new_scale)
-	set_rotation(0 if torque > 0 else PI)
+	set_rotation(0.0 if torque > 0 else PI)
 
