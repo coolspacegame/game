@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=28 format=3 uid="uid://d01ygggpfvijv"]
 
 [ext_resource type="Script" uid="uid://rgflb6k6h6ef" path="res://scripts/TheCharacter.gd" id="1_rj586"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://shaders/bg_shader.tres" id="2_q6r6c"]
@@ -26,6 +26,9 @@ gradient = SubResource("Gradient_rj586")
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_rj586"]
 radius = 20.0
 height = 80.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hqns4"]
+radius = 400.0
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_ir8iy"]
 noise_type = 0
@@ -77,8 +80,10 @@ gradient = SubResource("Gradient_ir8iy")
 
 [node name="TheCharacter" type="RigidBody2D" parent="."]
 mass = 100.0
+linear_damp_mode = 1
+linear_damp = 0.7
 angular_damp_mode = 1
-angular_damp = 1.0
+angular_damp = 0.1
 script = ExtResource("1_rj586")
 
 [node name="MeshInstance2D" type="MeshInstance2D" parent="TheCharacter"]
@@ -113,6 +118,11 @@ texture_filter = 1
 rotation = -2.35619
 scale = Vector2(0.1, 0.1)
 texture = ExtResource("3_epypp")
+
+[node name="Area2D" type="Area2D" parent="TheCharacter"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TheCharacter/Area2D"]
+shape = SubResource("CircleShape2D_hqns4")
 
 [node name="TheGenerator" type="Node2D" parent="."]
 script = ExtResource("7_4d7sh")
@@ -210,7 +220,11 @@ script = ExtResource("9_hqns4")
 [connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/MinimapCamera" method="_on_character_position_updated"]
 [connection signal="rotation_updated" from="TheCharacter" to="TheCamera" method="on_character_rotation_updated"]
 [connection signal="rotation_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_rotation_updated"]
+[connection signal="body_entered" from="TheCharacter/Area2D" to="TheGenerator" method="_on_approaching_character"]
+[connection signal="body_exited" from="TheCharacter/Area2D" to="TheGenerator" method="_on_exiting_character"]
+[connection signal="asteroid_approaching_character" from="TheGenerator" to="TheCharacter" method="_on_asteroid_approaching"]
 [connection signal="asteroid_body_created" from="TheGenerator" to="TheCharacter" method="_on_asteroid_body_created"]
+[connection signal="asteroid_exiting_character" from="TheGenerator" to="TheCharacter" method="_on_asteroid_exiting"]
 [connection signal="asteroid_mesh_created" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_created"]
 [connection signal="asteroid_transform_updated" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_transform_updated"]
 [connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]

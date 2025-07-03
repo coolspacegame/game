@@ -5,11 +5,14 @@ extends Node2D
 
 @export var detail_noise: FastNoiseLite
 @export var size_noise: FastNoiseLite
+@export var global_seed := 111
 
 
 signal asteroid_mesh_created(mesh: Mesh)
 signal asteroid_transform_updated(idx: int, transform: Transform2D)
 signal asteroid_body_created(body: RigidBody2D)
+signal asteroid_approaching_character(asteroid: RigidBody2D)
+signal asteroid_exiting_character(asteroid: RigidBody2D)
 
 class TileInfo:
 	var is_border_tile = false
@@ -26,6 +29,15 @@ const FINE_GRID_DEPTH := 7
 func rand_point_in_rect(rect_min: Vector2, rect_max: Vector2) -> Vector2:
 	return Vector2(randf_range(rect_min.x, rect_max.x), randf_range(rect_min.y, rect_max.y))
 
+func _on_approaching_character(body: Node2D):
+	if body is RigidBody2D and is_ancestor_of(body):
+		asteroid_approaching_character.emit(body)
+
+func _on_exiting_character(body: Node2D):
+	if body is RigidBody2D and is_ancestor_of(body):
+		asteroid_exiting_character.emit(body)
+
+
 func generate_chunk(chunk_coord: Vector2i):
 	var fine_grid_resolution = int(pow(2, FINE_GRID_DEPTH) + 0.5)
 	# var fine_grid_chunk_coord = chunk_coord * fine_grid_resolution
@@ -38,7 +50,7 @@ func generate_chunk(chunk_coord: Vector2i):
 	var rect_min :=  Vector2(chunk_coord) * SQUARE_CHUNK_SIZE + Vector2.ONE * asteroid_spacing_factor / 2
 	var rect_max := Vector2(chunk_coord + Vector2i.ONE) * SQUARE_CHUNK_SIZE - Vector2.ONE * asteroid_spacing_factor / 2
 
-	seed(hash(chunk_coord))
+	seed(global_seed ^ hash(chunk_coord))
 
 	var initial_point := rand_point_in_rect(rect_min, rect_max)
 	var active_points := [initial_point]
@@ -73,12 +85,13 @@ func generate_chunk(chunk_coord: Vector2i):
 
 
 	# print_debug(final_points)
+	size_noise.seed = randi()
 
 	for point in final_points:
 
 		var asteroid_border_tiles = []
 
-		detail_noise.seed += 1
+		detail_noise.seed = randi()
 
 
 
@@ -111,7 +124,7 @@ func generate_chunk(chunk_coord: Vector2i):
 
 		var asteroid_center = centroid
 
-		rigid_body.mass = 200.0 * asteroid_border_tiles.size()
+		rigid_body.mass = 2000.0 * asteroid_border_tiles.size()
 		rigid_body.transform = rigid_body.transform.translated(asteroid_center)
 
 		asteroid.generate_mesh(asteroid_border_tiles, fine_grid_size, asteroid_center)
@@ -153,7 +166,7 @@ func _process(delta: float) -> void:
 
 
 func _ready() -> void:
-	const SIZE := 3
+	const SIZE := 5
 
 	for i in range(-SIZE / 2, SIZE / 2):
 		for j in range(-SIZE / 2, SIZE / 2):
