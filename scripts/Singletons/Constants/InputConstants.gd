@@ -15,7 +15,7 @@ enum InputAction {
 	INPUT_ACTION_PAUSE
 }
 
-const InputActionEnumToString = {
+const InputActionStringToEnum = {
 	"skelly_input_action_left" 		: 	InputAction.INPUT_ACTION_LEFT,
 	"skelly_input_action_right"		: 	InputAction.INPUT_ACTION_RIGHT,
 	"skelly_input_action_forward"	:	InputAction.INPUT_ACTION_FORWARD,
