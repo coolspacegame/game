@@ -5,53 +5,11 @@ signal input_force_applied(force: Vector2)
 signal position_updated(position: Vector2)
 signal rotation_updated(rotation: float)
 
-var _mouse_update: Vector2 = Vector2.ZERO
-var _input_dir_state: Vector2i = Vector2i.ZERO
-var _mouse_button_pressed: bool = false
-var touch_start_position: Vector2 = Vector2.ZERO
-var touch_was_pressed: bool = false
+var _input_force: Vector2 = Vector2.ZERO
+var _input_torque: float = 0.0
+var input_dir: Vector2i = Vector2i.ZERO
 
 var nearby_asteroid_bodies: Dictionary = {}
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion:
-		if _mouse_button_pressed:
-			_mouse_update += event.relative
-	elif event is InputEventMouseButton:
-		_mouse_update = Vector2.ZERO
-		_mouse_button_pressed = event.pressed
-	elif event is InputEventKey:
-		if event.keycode == KEY_W:
-			_input_dir_state += Vector2i.UP * (1 if event.pressed else -1)
-		elif event.keycode == KEY_A:
-			_input_dir_state += Vector2i.LEFT * (1 if event.pressed else -1)
-		# elif event.keycode == KEY_S:
-		# 	_input_dir_state += Vector2i.DOWN * (1 if event.pressed else -1)
-		elif event.keycode == KEY_D:
-			_input_dir_state += Vector2i.RIGHT * (1 if event.pressed else -1)
-		_input_dir_state = Vector2i(
-			clamp(_input_dir_state.x, -1, 1),
-			clamp(_input_dir_state.y, -1, 1)
-		)
-	elif event is InputEventScreenDrag:
-		if touch_was_pressed:
-			var p = event.position - touch_start_position - Vector2(get_viewport().size) / 2 
-			var new_state = Vector2i(0, 0)
-			if abs(p.x) > 100:
-				new_state += Vector2i(1 if p.x > 0 else -1, 0)
-			if abs(p.y) > 100:
-				new_state += Vector2i(0, 1 if p.y > 0 else -1)
-			_input_dir_state = new_state
-	elif event is InputEventScreenTouch:
-		if event.pressed:
-			if touch_was_pressed:
-				pass
-			else:
-				touch_start_position = event.position - Vector2(get_viewport().size) / 2 
-				touch_was_pressed = true
-		else:
-			touch_was_pressed = false
-			_input_dir_state = Vector2i(0,0)
 
 func _on_asteroid_body_created(body: RigidBody2D):
 	# nearby_asteroid_bodies.append(body)
@@ -114,30 +72,35 @@ func _physics_process(delta: float) -> void:
 		ad = ad + 2*PI
 
 
-	if abs(_input_dir_state.x) < 0.1:
-		apply_torque((-1000.0 * ad  - 300.0 * angular_velocity) * gravity_force.length())
-
 	# apply_torque(-1000.0 * acos(v1.dot(v2) / (v1.length() * v2.length())))
 
+	var debounce_filter_size := 2
 
-	if abs(_input_dir_state.y) < 0.1:
-		apply_central_force(gravity_force)
 	# apply_force(max_force, boundary_rect.get_support(Vector2.DOWN))
+	if Input.is_action_pressed("move_right"):
+		input_dir.x = clamp(input_dir.x + 1, -debounce_filter_size, debounce_filter_size)
+	elif Input.is_action_pressed("move_left"):
+		input_dir.x = clamp(input_dir.x - 1, -debounce_filter_size, debounce_filter_size)
+	else:
+		input_dir.x -= sign(input_dir.x)
 
+	if Input.is_action_pressed("move_up"):
+		input_dir.y = clamp(input_dir.y + 1, 0, debounce_filter_size)
+	else:
+		input_dir.y -= sign(input_dir.y)
 
+	_input_force = 20000.0 * input_dir.y * Vector2.DOWN
+	_input_force = transform.basis_xform(_input_force).rotated(PI)
+	_input_torque = 100000.0 * input_dir.x
 
-	var input_force := 20000.0 * _input_dir_state.y * Vector2.UP
-	input_force = transform.basis_xform(input_force).rotated(PI)
-	apply_central_force(input_force)
+	if input_dir == Vector2i.ZERO:
+		apply_torque((-1000.0 * ad  - 300.0 * angular_velocity) * gravity_force.length())
+		apply_central_force(gravity_force)
+	else:
+		apply_central_force(_input_force)
+		apply_torque(_input_torque)
 
-	var input_torque := 100000.0 * _input_dir_state.x
-	apply_torque(input_torque)
-
-	emit_signal("input_torque_applied", input_torque)
-	emit_signal("input_force_applied", input_force)
+	emit_signal("input_torque_applied", _input_torque)
+	emit_signal("input_force_applied", _input_force)
 	emit_signal("position_updated", global_position)
 	emit_signal("rotation_updated", global_rotation)
-
-
-func _on_the_generator_asteroid_approaching_character(asteroid:RigidBody2D) -> void:
-	pass # Replace with function body.
