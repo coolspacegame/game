@@ -139,13 +139,14 @@ func generate_chunk(chunk_coord: Vector2i):
 			rigid_body.add_child(collision_shape)
 
 		# collision_poly.polygon = Geometry2D.decompose_polygon_in_convex(p)
-
 		rigid_body.add_child(asteroid)
-
+		rigid_body.collision_layer = 0b101
+		rigid_body.collision_mask = 0b111
 		add_child(rigid_body)
 
 		var body := get_child(get_child_count() - 1) as RigidBody2D
 		asteroid_body_created.emit(body)
+
 
 
 		body.apply_central_impulse(100 * (Vector2(randf(), randf()) * 2 - Vector2.ONE))
