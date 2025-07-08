@@ -8,7 +8,7 @@ height = 80.0
 
 [sub_resource type="Gradient" id="Gradient_rj586"]
 offsets = PackedFloat32Array(1)
-colors = PackedColorArray(0.983939, 0, 0.431755, 1)
+colors = PackedColorArray(0.98, 0.98, 0.98, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_4agl4"]
 gradient = SubResource("Gradient_rj586")
