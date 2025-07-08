@@ -17,7 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-GameState="*res://scripts/Singletons/SkellyGameState.gd"
+GameState="*res://scripts/Singletons/skelly_game_state.gd"
 
 [dotnet]
 
