@@ -84,6 +84,8 @@ gradient = SubResource("Gradient_ir8iy")
 collision_layer = 3
 collision_mask = 5
 mass = 100.0
+contact_monitor = true
+max_contacts_reported = 4
 linear_damp_mode = 1
 linear_damp = 0.7
 angular_damp_mode = 1
@@ -219,6 +221,7 @@ asteroid_texture = SubResource("GradientTexture1D_hqns4")
 scale = Vector2(100, 100)
 script = ExtResource("9_hqns4")
 
+[connection signal="body_entered" from="TheCharacter" to="TheGenerator" method="_on_the_character_body_entered"]
 [connection signal="booster_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
 [connection signal="booster_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]
 [connection signal="boosters_enabled_updated" from="TheCharacter" to="TheCharacter/MeshInstance2D" method="_on_the_character_boosters_enabled_updated"]
@@ -230,8 +233,8 @@ script = ExtResource("9_hqns4")
 [connection signal="body_entered" from="TheCharacter/Area2D" to="TheGenerator" method="_on_approaching_character"]
 [connection signal="body_exited" from="TheCharacter/Area2D" to="TheGenerator" method="_on_exiting_character"]
 [connection signal="asteroid_approaching_character" from="TheGenerator" to="TheCharacter" method="_on_asteroid_approaching"]
-[connection signal="asteroid_body_created" from="TheGenerator" to="TheCharacter" method="_on_asteroid_body_created"]
 [connection signal="asteroid_exiting_character" from="TheGenerator" to="TheCharacter" method="_on_asteroid_exiting"]
 [connection signal="asteroid_mesh_created" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_created"]
+[connection signal="asteroid_touching_character" from="TheGenerator" to="TheCharacter" method="_on_the_generator_asteroid_touching_character"]
 [connection signal="asteroid_transform_updated" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_transform_updated"]
 [connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]

@@ -117,3 +117,7 @@ func _physics_process(_delta: float) -> void:
 
 	position_updated.emit(global_position)
 	rotation_updated.emit(global_rotation)
+
+
+func _on_the_generator_asteroid_touching_character(asteroid: TheAsteroid) -> void:
+	pass
