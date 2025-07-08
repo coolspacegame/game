@@ -10,8 +10,8 @@ func on_character_position_updated(pos: Vector2) -> void:
 	apply_central_force(spring_force)
 
 func on_character_rotation_updated(rot: float) -> void:
-	const spring_constant := 10000.0
-	const damping_constant := 800.0
+	const spring_constant := 100000.0
+	const damping_constant := 10000.0
 
 	var rd := global_rotation - rot
 	if rd > PI:
