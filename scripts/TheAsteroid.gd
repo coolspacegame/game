@@ -15,13 +15,25 @@ class Tile:
 
 
 
+var collision_shapes: Array[CollisionShape2D]
 var mesh_node: MeshInstance2D
+var rigid_body: RigidBody2D
+
 var collision_polygon: PackedVector2Array
+var border_tiles: Dictionary
 
 func _init():
 	var m = MeshInstance2D.new()
-	add_child(m)
-	mesh_node = get_child(0)
+	var r = RigidBody2D.new()
+
+
+	r.add_child(m)
+	add_child(r)
+	rigid_body = get_child(0)
+	mesh_node = rigid_body.get_child(0)
+	rigid_body.collision_layer = 0b101
+	rigid_body.collision_mask = 0b111
+
 
 func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin: Vector2) -> void:
 
@@ -61,3 +73,19 @@ func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin:
 
 		border_points = new_poly
 	collision_polygon = border_points
+
+	rigid_body.mass = 2000.0 * tile_coords.size()
+	rigid_body.global_position = asteroid_origin
+
+	var p = collision_polygon
+	var hulls = Geometry2D.decompose_polygon_in_convex(p)
+	for hull in hulls:
+		var collision_shape := CollisionShape2D.new()
+		collision_shape.shape = ConvexPolygonShape2D.new()
+		collision_shape.shape.points = hull
+		rigid_body.add_child(collision_shape)
+
+	# rigid_body.add_child(asteroid)
+	# add_child(rigid_body)
+	rigid_body.apply_central_impulse(100 * (Vector2(randf(), randf()) * 2 - Vector2.ONE))
+	rigid_body.apply_torque_impulse(100 * (randf() * 2 - 1))
