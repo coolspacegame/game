@@ -1,8 +1,9 @@
-[gd_scene load_steps=28 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=29 format=3 uid="uid://d01ygggpfvijv"]
 
 [ext_resource type="Script" uid="uid://rgflb6k6h6ef" path="res://scripts/TheCharacter.gd" id="1_rj586"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://shaders/bg_shader.tres" id="2_q6r6c"]
 [ext_resource type="Script" uid="uid://ddxlg4rwwjquh" path="res://scripts/Triangle.gd" id="2_rj586"]
+[ext_resource type="Script" uid="uid://dqtny0hnhe23y" path="res://scripts/CharacterMeshInstance.gd" id="2_x0ka3"]
 [ext_resource type="Texture2D" uid="uid://dxfw21pry7viu" path="res://img/triangle.png" id="3_epypp"]
 [ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://scripts/TheCamera.gd" id="4_rj586"]
 [ext_resource type="Script" uid="uid://mt3ebexr2yyf" path="res://scripts/TheLabel.gd" id="5_4d7sh"]
@@ -18,7 +19,7 @@ height = 80.0
 
 [sub_resource type="Gradient" id="Gradient_rj586"]
 offsets = PackedFloat32Array(1)
-colors = PackedColorArray(0.983939, 0, 0.431755, 1)
+colors = PackedColorArray(0.98, 0.98, 0.98, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_4d7sh"]
 gradient = SubResource("Gradient_rj586")
@@ -46,6 +47,7 @@ shader = ExtResource("2_q6r6c")
 size = Vector2(4096, 4096)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
+radius = 50.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hqns4"]
 bg_color = Color(0.6, 0.6, 0.6, 0.388235)
@@ -78,17 +80,21 @@ gradient = SubResource("Gradient_ir8iy")
 
 [node name="Node2D" type="Node2D"]
 
-[node name="TheCharacter" type="RigidBody2D" parent="."]
+[node name="TheCharacter" type="RigidBody2D" parent="." node_paths=PackedStringArray("physics_shape")]
+collision_layer = 3
+collision_mask = 5
 mass = 100.0
 linear_damp_mode = 1
 linear_damp = 0.7
 angular_damp_mode = 1
 angular_damp = 0.1
 script = ExtResource("1_rj586")
+physics_shape = NodePath("CollisionShape2D")
 
 [node name="MeshInstance2D" type="MeshInstance2D" parent="TheCharacter"]
 mesh = SubResource("CapsuleMesh_4d7sh")
 texture = SubResource("GradientTexture1D_4d7sh")
+script = ExtResource("2_x0ka3")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TheCharacter"]
 shape = SubResource("CapsuleShape2D_rj586")
@@ -100,7 +106,7 @@ script = ExtResource("2_rj586")
 scale = Vector2(1, 0.2)
 
 [node name="TriangleSprite" type="Sprite2D" parent="TheCharacter/Triangle/Node2D"]
-modulate = Color(0.409066, 1, 0.75717, 1)
+modulate = Color(0.27, 0.768833, 1, 1)
 texture_filter = 1
 rotation = -2.35619
 scale = Vector2(0.1, 0.1)
@@ -213,8 +219,9 @@ asteroid_texture = SubResource("GradientTexture1D_hqns4")
 scale = Vector2(100, 100)
 script = ExtResource("9_hqns4")
 
-[connection signal="input_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
-[connection signal="input_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]
+[connection signal="booster_force_applied" from="TheCharacter" to="TheCharacter/Triangle" method="on_input_force_applied"]
+[connection signal="booster_torque_applied" from="TheCharacter" to="TheCharacter/HorizontalTriangle" method="on_input_torque_applied"]
+[connection signal="boosters_enabled_updated" from="TheCharacter" to="TheCharacter/MeshInstance2D" method="_on_the_character_boosters_enabled_updated"]
 [connection signal="position_updated" from="TheCharacter" to="TheCamera" method="on_character_position_updated"]
 [connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_position_updated"]
 [connection signal="position_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/MinimapCamera" method="_on_character_position_updated"]
