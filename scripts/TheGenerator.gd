@@ -10,15 +10,15 @@ extends Node2D
 
 signal asteroid_mesh_created(mesh: Mesh)
 signal asteroid_transform_updated(idx: int, transform: Transform2D)
-signal asteroid_body_created(body: RigidBody2D)
 signal asteroid_approaching_character(asteroid: RigidBody2D)
 signal asteroid_exiting_character(asteroid: RigidBody2D)
+signal asteroid_touching_character(asteroid: TheAsteroid)
 
 class TileInfo:
 	var is_border_tile = false
 
 var generated_chunks := {}
-var generated_tiles := {}
+# var generated_tiles := {}
 
 const SQUARE_CHUNK_SIZE := 4096.0
 
@@ -36,7 +36,6 @@ func _on_approaching_character(body: Node2D):
 func _on_exiting_character(body: Node2D):
 	if body is RigidBody2D and is_ancestor_of(body):
 		asteroid_exiting_character.emit(body)
-
 
 func generate_chunk(chunk_coord: Vector2i):
 	var fine_grid_resolution = int(pow(2, FINE_GRID_DEPTH) + 0.5)
@@ -119,46 +118,20 @@ func generate_chunk(chunk_coord: Vector2i):
 			centroid += Vector2(tile) * fine_grid_size / len(asteroid_border_tiles)
 
 		var asteroid = TheAsteroid.new()
-		var rigid_body = RigidBody2D.new()
-
 
 		var asteroid_center = centroid
 
-		rigid_body.mass = 2000.0 * asteroid_border_tiles.size()
-		rigid_body.transform = rigid_body.transform.translated(asteroid_center)
-
 		asteroid.generate_mesh(asteroid_border_tiles, fine_grid_size, asteroid_center)
+
 		asteroid_mesh_created.emit(asteroid.mesh_node.mesh)
-
-		var p = asteroid.collision_polygon
-		var hulls = Geometry2D.decompose_polygon_in_convex(p)
-		for hull in hulls:
-			var collision_shape := CollisionShape2D.new()
-			collision_shape.shape = ConvexPolygonShape2D.new()
-			collision_shape.shape.points = hull
-			rigid_body.add_child(collision_shape)
-
-		# collision_poly.polygon = Geometry2D.decompose_polygon_in_convex(p)
-		rigid_body.add_child(asteroid)
-		rigid_body.collision_layer = 0b101
-		rigid_body.collision_mask = 0b111
-		add_child(rigid_body)
-
-		var body := get_child(get_child_count() - 1) as RigidBody2D
-		asteroid_body_created.emit(body)
-
-
-
-		body.apply_central_impulse(100 * (Vector2(randf(), randf()) * 2 - Vector2.ONE))
-		body.apply_torque_impulse(100 * (randf() * 2 - 1))
-
+		add_child(asteroid)
 
 func _process(delta: float) -> void:
 	for child_idx in range(get_child_count()):
-		var child = get_child(child_idx) as Node2D
+		var child := get_child(child_idx) as TheAsteroid
 		# var r = child as RigidBody2D
 
-		asteroid_transform_updated.emit(child_idx, child.transform)
+		asteroid_transform_updated.emit(child_idx, child.rigid_body.transform)
 
 # func _physics_process(delta: float) -> void:
 # 	for child in get_children():
@@ -174,3 +147,14 @@ func _ready() -> void:
 			var c = Vector2i(i, j)
 			# print_debug(c)
 			generate_chunk(c)
+
+
+func _on_the_character_body_entered(body: Node) -> void:
+	if is_ancestor_of(body):
+		var p = body.get_parent()
+		if p is TheAsteroid:
+			asteroid_touching_character.emit(p)
+
+
+
+		# for child in body.get_children():
