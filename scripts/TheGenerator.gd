@@ -12,7 +12,8 @@ signal asteroid_mesh_created(mesh: Mesh)
 signal asteroid_transform_updated(idx: int, transform: Transform2D)
 signal asteroid_approaching_character(asteroid: RigidBody2D)
 signal asteroid_exiting_character(asteroid: RigidBody2D)
-signal asteroid_touching_character(asteroid: TheAsteroid)
+signal asteroid_touching_character(asteroid_tile: AsteroidTile)
+signal asteroid_not_touching_character(asteroid_tile: AsteroidTile)
 
 class TileInfo:
 	var is_border_tile = false
@@ -150,11 +151,27 @@ func _ready() -> void:
 
 
 func _on_the_character_body_entered(body: Node) -> void:
-	if is_ancestor_of(body):
-		var p = body.get_parent()
-		if p is TheAsteroid:
-			asteroid_touching_character.emit(p)
+	pass
+	# if is_ancestor_of(body):
+	# 	var p = body.get_parent()
+	# 	if p is TheAsteroid:
+	# 		asteroid_touching_character.emit(p)
 
 
 
-		# for child in body.get_children():
+func _on_the_character_body_exited(body:Node) -> void:
+	pass
+	# if is_ancestor_of(body):
+	# 	var p = body.get_parent()
+	# 	if p is TheAsteroid:
+	# 		asteroid_not_touching_character.emit(p)
+
+
+func _on_mining_area_2d_area_entered(area: Area2D) -> void:
+	if area is AsteroidTile:
+		asteroid_touching_character.emit(area)
+
+
+func _on_mining_area_2d_area_exited(area: Area2D) -> void:
+	if area is AsteroidTile:
+		asteroid_not_touching_character.emit(area)

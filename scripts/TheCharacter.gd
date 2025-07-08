@@ -13,6 +13,8 @@ var _input_torque: float = 0.0
 var _input_dir: Vector2i = Vector2i.ZERO
 var _boosters_enabled: bool = true
 var _nearby_asteroid_bodies: Dictionary = {}
+var _asteroid_tiles_touching: Array[TheAsteroid] = []
+
 const GRAVITATIONAL_CONSTANT := 200.0
 
 
@@ -118,6 +120,36 @@ func _physics_process(_delta: float) -> void:
 	position_updated.emit(global_position)
 	rotation_updated.emit(global_rotation)
 
+	if Input.is_action_just_pressed("mine"):
+		for tile in _asteroid_tiles_touching:
+			tile.emit_destroyed()
+		
+	
 
-func _on_the_generator_asteroid_touching_character(asteroid: TheAsteroid) -> void:
-	pass
+
+func _on_character_area_entered(area:Area2D) -> void:
+	return
+	if area is AsteroidTile:
+
+		area.monitoring = true
+
+
+func _on_character_area_exited(area:Area2D) -> void:
+	return
+	if area is AsteroidTile:
+		area.monitoring = false
+
+
+func _on_the_generator_asteroid_touching_character(asteroid_tile: AsteroidTile) -> void:
+	_asteroid_tiles_touching.append(asteroid_tile)
+
+
+func _on_the_generator_asteroid_not_touching_character(asteroid_tile: AsteroidTile) -> void:
+	var to_remove := []
+	for i in range(_asteroid_tiles_touching.size()):
+		if _asteroid_tiles_touching[i] == asteroid_tile:
+			to_remove.append(i)
+
+	to_remove.reverse()
+	for i in to_remove:
+		_asteroid_tiles_touching.erase(i)
