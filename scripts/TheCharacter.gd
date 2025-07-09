@@ -8,50 +8,21 @@ signal rotation_updated(rotation: float)
 var _mouse_update: Vector2 = Vector2.ZERO
 var _input_dir_state: Vector2i = Vector2i.ZERO
 var _mouse_button_pressed: bool = false
-var touch_start_position: Vector2 = Vector2.ZERO
-var touch_was_pressed: bool = false
 
 var nearby_asteroid_bodies: Dictionary = {}
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion:
-		if _mouse_button_pressed:
-			_mouse_update += event.relative
-	elif event is InputEventMouseButton:
-		_mouse_update = Vector2.ZERO
-		_mouse_button_pressed = event.pressed
-	elif event is InputEventKey:
+	if event is InputEventKey:
 		if event.keycode == KEY_W:
 			_input_dir_state += Vector2i.UP * (1 if event.pressed else -1)
 		elif event.keycode == KEY_A:
 			_input_dir_state += Vector2i.LEFT * (1 if event.pressed else -1)
-		# elif event.keycode == KEY_S:
-		# 	_input_dir_state += Vector2i.DOWN * (1 if event.pressed else -1)
 		elif event.keycode == KEY_D:
 			_input_dir_state += Vector2i.RIGHT * (1 if event.pressed else -1)
 		_input_dir_state = Vector2i(
 			clamp(_input_dir_state.x, -1, 1),
 			clamp(_input_dir_state.y, -1, 1)
 		)
-	elif event is InputEventScreenDrag:
-		if touch_was_pressed:
-			var p = event.position - touch_start_position - Vector2(get_viewport().size) / 2 
-			var new_state = Vector2i(0, 0)
-			if abs(p.x) > 100:
-				new_state += Vector2i(1 if p.x > 0 else -1, 0)
-			if abs(p.y) > 100:
-				new_state += Vector2i(0, 1 if p.y > 0 else -1)
-			_input_dir_state = new_state
-	elif event is InputEventScreenTouch:
-		if event.pressed:
-			if touch_was_pressed:
-				pass
-			else:
-				touch_start_position = event.position - Vector2(get_viewport().size) / 2 
-				touch_was_pressed = true
-		else:
-			touch_was_pressed = false
-			_input_dir_state = Vector2i(0,0)
 
 func _on_asteroid_body_created(body: RigidBody2D):
 	# nearby_asteroid_bodies.append(body)
