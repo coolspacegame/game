@@ -5,10 +5,7 @@ signal input_force_applied(force: Vector2)
 signal position_updated(position: Vector2)
 signal rotation_updated(rotation: float)
 
-var _mouse_update: Vector2 = Vector2.ZERO
 var _input_dir_state: Vector2i = Vector2i.ZERO
-var _mouse_button_pressed: bool = false
-
 var nearby_asteroid_bodies: Dictionary = {}
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -24,37 +21,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			clamp(_input_dir_state.y, -1, 1)
 		)
 
-func _on_asteroid_body_created(body: RigidBody2D):
-	# nearby_asteroid_bodies.append(body)
-	pass
-
-
-# func _on_gravity_area_entered(area: Area2D):
-# 	if is_ancestor_of(area):
-# 		pass
-
-# func _ready() -> void:
-# 	nearby_asteroid_bodies = {}
-
-func _process(delta: float) -> void:
-	pass
-
 func _on_asteroid_approaching(asteroid: RigidBody2D):
 	nearby_asteroid_bodies[asteroid.get_rid()] = asteroid
-	# print("{0} asteroid entering".format([asteroid.get_rid()]))
 
 func _on_asteroid_exiting(asteroid: RigidBody2D):
 	nearby_asteroid_bodies.erase(asteroid.get_rid())
-	# print("{0} asteroid leaving".format([asteroid.get_rid()]))
 
-func _physics_process(delta: float) -> void:
-	# const meteor_mass := 5000000.0
-	# const character_mass := 1.0
+func _physics_process(_delta: float) -> void:
 	const gravitational_constant := 200.0
-	# var bodies = $Area2D.get_overlapping_bodies() as Array[Node2D]
 
 	var max_force = Vector2.ZERO
-
 
 	for body in nearby_asteroid_bodies.values():
 		var asteroid_mass = body.mass
@@ -67,11 +43,8 @@ func _physics_process(delta: float) -> void:
 		if force_magnitude > max_force.length():
 			max_force = force
 
-	# var cs = $CollisionShape2D as CollisionShape2D
-	# var boundary_rect = cs.shape.get_rect()
 	var gravity_force = max_force
 
-	# apply_torque(-100.0 * max_force.normalized().cross(transform.basis_xform(Vector2.DOWN)) - 0.7 * angular_velocity)
 	var v1 = gravity_force.normalized()
 	var v2 = transform.basis_xform(Vector2.DOWN).normalized()
 
@@ -88,14 +61,8 @@ func _physics_process(delta: float) -> void:
 	if abs(_input_dir_state.x) < 0.1:
 		apply_torque((-1000.0 * ad  - 300.0 * angular_velocity) * gravity_force.length())
 
-	# apply_torque(-1000.0 * acos(v1.dot(v2) / (v1.length() * v2.length())))
-
-
 	if abs(_input_dir_state.y) < 0.1:
 		apply_central_force(gravity_force)
-	# apply_force(max_force, boundary_rect.get_support(Vector2.DOWN))
-
-
 
 	var input_force := 20000.0 * _input_dir_state.y * Vector2.UP
 	input_force = transform.basis_xform(input_force).rotated(PI)
@@ -108,7 +75,3 @@ func _physics_process(delta: float) -> void:
 	emit_signal("input_force_applied", input_force)
 	emit_signal("position_updated", global_position)
 	emit_signal("rotation_updated", global_rotation)
-
-
-func _on_the_generator_asteroid_approaching_character(asteroid:RigidBody2D) -> void:
-	pass # Replace with function body.
