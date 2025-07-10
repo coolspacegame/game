@@ -12,12 +12,16 @@ class Tile:
 	pass
 
 var mesh_node: MeshInstance2D
+var rigid_body: RigidBody2D
 var collision_polygon: PackedVector2Array
 
 func _init():
 	var m = MeshInstance2D.new()
 	add_child(m)
 	mesh_node = get_child(0)
+
+func _process(_delta: float) -> void:
+	mesh_node.transform = rigid_body.transform
 
 func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin: Vector2) -> void:
 
