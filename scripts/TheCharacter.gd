@@ -1,77 +1,150 @@
-extends RigidBody2D
+extends Node2D
+class_name TheCharacter
 
-signal input_torque_applied(torque: float)
-signal input_force_applied(force: Vector2)
-signal position_updated(position: Vector2)
-signal rotation_updated(rotation: float)
+## This signal is emitted when the internal physics body (RigidBody2D) changes its transform.
+## Primarily position and rotation are used, though scale could also be used.
+signal body_transform_updated(global_transform: Transform2D)
 
-var _input_dir_state: Vector2i = Vector2i.ZERO
-var nearby_asteroid_bodies: Dictionary = {}
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if event.keycode == KEY_W:
-			_input_dir_state += Vector2i.UP * (1 if event.pressed else -1)
-		elif event.keycode == KEY_A:
-			_input_dir_state += Vector2i.LEFT * (1 if event.pressed else -1)
-		elif event.keycode == KEY_D:
-			_input_dir_state += Vector2i.RIGHT * (1 if event.pressed else -1)
-		_input_dir_state = Vector2i(
-			clamp(_input_dir_state.x, -1, 1),
-			clamp(_input_dir_state.y, -1, 1)
-		)
+## The state of the last requested input movement (one of four directions, or zero)
+var _requested_movement := Vector2i.ZERO
 
-func _on_asteroid_approaching(asteroid: RigidBody2D):
-	nearby_asteroid_bodies[asteroid.get_rid()] = asteroid
+## asteroids that are detected within the radius of the $ProximityDetector node
+var _nearby_asteroids: Dictionary[RID, TheAsteroid] = {}
 
-func _on_asteroid_exiting(asteroid: RigidBody2D):
-	nearby_asteroid_bodies.erase(asteroid.get_rid())
+var _show_debug_indicators = true
+
+## Scale of the gravititational force from asteroids on the character
+const GRAVITATIONAL_CONSTANT := 200.0
+const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT = 1000.0
+const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT = 300.0
+const REQUESTED_MOVEMENT_FORCE_SCALE = 20000.0
+const REQUESTED_MOVEMENT_TORQUE_SCALE = 100000.0 
+const DEBUG_INDICATOR_LINE_WIDTH = 10.0
+const DEBUG_INDICATOR_LINE_LENGTH = 85.0
+const DEBUG_INDICATOR_ARROW_TIP_SIZE = 10.0
+
+# (TODO update this comment once "walking" mode is implemented)
+## This is intended for incoming signals to notify this object that the player is requesting movement with the given direction.
+## The magnitude of direction.x corresponds to enabling rotation, and the sign of direction.x determines if the character will rotate
+## clockwise (> 0) or counterclockwise (< 0). Similarily, the direction.y movement determines acceleration relative to the character's
+## forward axis. A positive direction.y value means the character will accelerate forward.
+func _on_request_movement(direction: Vector2i):
+	_requested_movement = direction
+
+## A callback used internally for the $ProximityDetector to notify this script that there is potentially nearby asteroid
+func _on_body_entered_proximity(body: Node2D):
+	if body is RigidBody2D:
+		var body_parent = body.get_parent()
+		if body_parent is TheAsteroid:
+			# TODO there should be a better key to use other than the rigid body's RID
+			_nearby_asteroids[body.get_rid()] = body_parent
+
+## A callback used internally for the $ProximityDetector to notify this script that potentially asteroid is moving away from the character
+func _on_body_exited_proximity(body: Node2D):
+	if body is RigidBody2D:
+		var body_parent = body.get_parent()
+		if body_parent is TheAsteroid:
+			_nearby_asteroids.erase(body.get_rid())
+
 
 func _physics_process(_delta: float) -> void:
-	const gravitational_constant := 200.0
-
-	var max_force = Vector2.ZERO
-
-	for body in nearby_asteroid_bodies.values():
-		var asteroid_mass = body.mass
-		var character_mass = mass
-		var radius = (body.global_position - global_position).length()
-		var force_magnitude = gravitational_constant * asteroid_mass * character_mass / (radius * radius)
-		var force_dir = (body.global_position - global_position).normalized()
-		var force = force_magnitude * force_dir
-
-		if force_magnitude > max_force.length():
-			max_force = force
-
-	var gravity_force = max_force
-
-	var v1 = gravity_force.normalized()
-	var v2 = transform.basis_xform(Vector2.DOWN).normalized()
-
-	var a1 = atan2(v1.y, v1.x)
-	var a2 = atan2(v2.y, v2.x)
-	var ad = a2 - a1
-
-	if ad > PI:
-		ad = ad - 2*PI
-	elif ad < -PI:
-		ad = ad + 2*PI
 
 
-	if abs(_input_dir_state.x) < 0.1:
-		apply_torque((-1000.0 * ad  - 300.0 * angular_velocity) * gravity_force.length())
+	# in this section we are seeking the strongest gravitational pull of the nearby asteroids,
+	# and we will apply it to the character
 
-	if abs(_input_dir_state.y) < 0.1:
-		apply_central_force(gravity_force)
+	var strongest_gravity_force := Vector2.ZERO
+	var character_body := $PhysicsBody as RigidBody2D
+	var character_mass := character_body.mass
 
-	var input_force := 20000.0 * _input_dir_state.y * Vector2.UP
-	input_force = transform.basis_xform(input_force).rotated(PI)
-	apply_central_force(input_force)
+	for asteroid: TheAsteroid in _nearby_asteroids.values():
+		var asteroid_body := (asteroid.rigid_body as RigidBody2D)
+		var asteroid_mass := asteroid_body.mass
+		var relative_position := (asteroid_body.global_position - character_body.global_position)
+		var radius := relative_position.length()
+		var gravity_force_magnitude := GRAVITATIONAL_CONSTANT * asteroid_mass * character_mass / (radius * radius)
+		var gravity_force_direction := relative_position.normalized()
+		var gravity_force := gravity_force_magnitude * gravity_force_direction
 
-	var input_torque := 100000.0 * _input_dir_state.x
-	apply_torque(input_torque)
+		if gravity_force_magnitude > strongest_gravity_force.length():
+			strongest_gravity_force = gravity_force
 
-	emit_signal("input_torque_applied", input_torque)
-	emit_signal("input_force_applied", input_force)
-	emit_signal("position_updated", global_position)
-	emit_signal("rotation_updated", global_rotation)
+
+	# here we are determining the orientation of the character relative to the asteroid with the strongest pull.
+	# This will be used to rotate the character to align with the surface of the asteroid, providing a "landing" effect
+	var chosen_gravity_direction = strongest_gravity_force.normalized()
+	var character_orientation = character_body.transform.basis_xform(Vector2.DOWN).normalized()
+
+	# angle of the gravity vector relative to +x
+	var gravity_vector_angle = atan2(chosen_gravity_direction.y, chosen_gravity_direction.x)
+
+	# angle of the character orientation vector relative to +x
+	var character_rotation_angle = atan2(character_orientation.y, character_orientation.x)
+	var angle_delta = character_rotation_angle - gravity_vector_angle
+
+
+	# correct the angle delta such that we will always rotate the character the shortest distance. This is necessary for example when
+	# one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the character would rotate almost a full 360,
+	# when really we only need to move a few degrees (We are actually working in radians)
+	if angle_delta > PI:
+		angle_delta = angle_delta - 2*PI
+	elif angle_delta < -PI:
+		angle_delta = angle_delta + 2*PI
+
+	# only apply input force/torque if there is requested movement
+	var should_apply_player_input = _requested_movement != Vector2i.ZERO
+
+	# if we are not receiving a direct request for movement/acceleration, then apply force/torque due to gravity and the automatic rotation to 
+	# orient towards the asteroid
+	if not should_apply_player_input:
+		var torque_spring_component = AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+		var torque_damping_component = AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+		var automatic_rotation_torque = -torque_spring_component - torque_damping_component
+		var scaled_automatic_rotation_torque = automatic_rotation_torque * strongest_gravity_force.length()
+
+		character_body.apply_torque(scaled_automatic_rotation_torque)
+		character_body.apply_central_force(strongest_gravity_force)
+
+
+	# apply the force and torque as requested, presumably as a signal from the player input controller
+	var requested_movement_force := REQUESTED_MOVEMENT_FORCE_SCALE * _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation)
+	var requested_movement_torque := REQUESTED_MOVEMENT_TORQUE_SCALE * _requested_movement.x
+	character_body.apply_central_force(requested_movement_force)
+	character_body.apply_torque(requested_movement_torque)
+
+	# send the signal out that will notify other nodes that the character has moved
+	body_transform_updated.emit(character_body.global_transform)
+
+	# update the rigidbody's siblings to be in the same position as the rigidbody
+	var character_mesh := $RenderMesh as MeshInstance2D
+	var character_proximity_detector = $ProximityDetector as Area2D
+
+	character_mesh.transform = character_body.transform
+	character_proximity_detector.transform = character_body.transform
+
+	# this is to make sure the _draw() method is called each frame
+	queue_redraw()
+
+func _draw() -> void:
+
+	var character_body := $PhysicsBody as RigidBody2D
+	
+	# if enabled, show an arrow indicated the input acceleration given by the requested movement
+	if _show_debug_indicators:
+		var arrow_vector_force = _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation) * DEBUG_INDICATOR_LINE_LENGTH
+		var arrow_vector_torque = _requested_movement.x * Vector2.RIGHT.rotated(character_body.rotation) * DEBUG_INDICATOR_LINE_LENGTH
+		
+		for arrow_vector in [arrow_vector_force, arrow_vector_torque]:
+			var debug_arrow_from = character_body.position
+			var debug_arrow_to = character_body.position + arrow_vector
+			draw_line(debug_arrow_from, debug_arrow_to, Color.WHITE, DEBUG_INDICATOR_LINE_WIDTH, false)
+			var arrow_tip_points = PackedVector2Array()
+			arrow_tip_points.append(arrow_vector.normalized() * DEBUG_INDICATOR_ARROW_TIP_SIZE + debug_arrow_to)
+			arrow_tip_points.append(arrow_vector.normalized().rotated(PI/2) * DEBUG_INDICATOR_ARROW_TIP_SIZE + debug_arrow_to)
+			arrow_tip_points.append(arrow_vector.normalized().rotated(-PI/2) * DEBUG_INDICATOR_ARROW_TIP_SIZE + debug_arrow_to)
+			var arrow_tip_colors = PackedColorArray()
+			arrow_tip_colors.append(Color.WHITE)
+			arrow_tip_colors.append(Color.WHITE)
+			arrow_tip_colors.append(Color.WHITE)
+			draw_polygon(arrow_tip_points, arrow_tip_colors)
