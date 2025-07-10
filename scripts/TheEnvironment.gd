@@ -9,8 +9,6 @@ var _rng = RandomNumberGenerator.new()
 signal asteroid_mesh_created(asteroid_mesh: Mesh)
 signal asteroid_transform_updated(idx: int, transform: Transform2D)
 
-signal asteroid_body_created(body: RigidBody2D)
-
 ## the size of a "chunk", a square region of the environment that is generated as a unit
 const SQUARE_CHUNK_SIZE := 4096
 
@@ -200,8 +198,6 @@ func generate_chunk(chunk_coord: Vector2i):
 		# add the asteroid we just generated to this Environment node as a child
 		add_child(asteroid)
 		asteroid = get_child(get_child_count() - 1)
-
-		asteroid_body_created.emit(asteroid.rigid_body)
 
 		# Give the new asteroid a small amount of random movement to start with
 		asteroid.rigid_body.apply_central_impulse(100 * (Vector2(_rng.randf(), _rng.randf()) * 2 - Vector2.ONE))
