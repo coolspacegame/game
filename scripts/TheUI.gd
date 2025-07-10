@@ -17,14 +17,12 @@ func _process(_delta: float) -> void:
 	($FPSCounter as Label).text = "FPS: %d" % Engine.get_frames_per_second()
 
 func _on_character_transform_updated(character_body_transform: Transform2D):
-	# TODO We should consider whether this is the best way to refrence a great-great-grandchild node...
-	# because it only works until we change the structure of the scene tree, then we have to edit this line
 	_character_indicator_node.position = character_body_transform.get_origin()
 	_character_indicator_node.rotation = character_body_transform.get_rotation()
 
 func _on_asteroid_mesh_created(asteroid_mesh: Mesh):
 
-	# create a deep copy of the asteroid mesh, and create a new node to attach it to for the minimap
+	# create a copy of the asteroid mesh, and create a new node to attach it to for the minimap
 	var mesh_copy = asteroid_mesh.duplicate()
 	var new_child = MeshInstance2D.new()
 
