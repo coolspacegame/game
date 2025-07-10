@@ -1,5 +1,5 @@
 
-class_name TheAsteroid
+class_name Asteroid
 extends Node2D
 
 class GenerateParameters:
@@ -10,10 +10,6 @@ class GenerateParameters:
 
 class Tile:
 	pass
-
-# Empty, as in your C# code
-
-
 
 var mesh_node: MeshInstance2D
 var collision_polygon: PackedVector2Array
