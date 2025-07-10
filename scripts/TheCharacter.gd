@@ -5,12 +5,11 @@ class_name TheCharacter
 ## Primarily position and rotation are used, though scale could also be used.
 signal body_transform_updated(global_transform: Transform2D)
 
-
 ## The state of the last requested input movement (one of four directions, or zero)
 var _requested_movement := Vector2i.ZERO
 
 ## asteroids that are detected within the radius of the $ProximityDetector node
-var _nearby_asteroids: Dictionary[RID, TheAsteroid] = {}
+var _nearby_asteroids: Dictionary[RID, Asteroid] = {}
 
 var _show_debug_indicators = true
 
@@ -36,7 +35,7 @@ func _on_request_movement(direction: Vector2i):
 func _on_body_entered_proximity(body: Node2D):
 	if body is RigidBody2D:
 		var body_parent = body.get_parent()
-		if body_parent is TheAsteroid:
+		if body_parent is Asteroid:
 			# TODO there should be a better key to use other than the rigid body's RID
 			_nearby_asteroids[body.get_rid()] = body_parent
 
@@ -44,7 +43,7 @@ func _on_body_entered_proximity(body: Node2D):
 func _on_body_exited_proximity(body: Node2D):
 	if body is RigidBody2D:
 		var body_parent = body.get_parent()
-		if body_parent is TheAsteroid:
+		if body_parent is Asteroid:
 			_nearby_asteroids.erase(body.get_rid())
 
 
@@ -58,7 +57,7 @@ func _physics_process(_delta: float) -> void:
 	var character_body := $PhysicsBody as RigidBody2D
 	var character_mass := character_body.mass
 
-	for asteroid: TheAsteroid in _nearby_asteroids.values():
+	for asteroid: Asteroid in _nearby_asteroids.values():
 		var asteroid_body := (asteroid.rigid_body as RigidBody2D)
 		var asteroid_mass := asteroid_body.mass
 		var relative_position := (asteroid_body.global_position - character_body.global_position)

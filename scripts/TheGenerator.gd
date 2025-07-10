@@ -1,15 +1,12 @@
 extends Node2D
 
-# @export var _noise: FastNoiseLite
-# @export var additive_noise: Array[FastNoiseLite]
-
 @export var detail_noise: FastNoiseLite
 @export var size_noise: FastNoiseLite
 @export var global_seed := 111
 
-
-signal asteroid_mesh_created(mesh: Mesh)
+signal asteroid_mesh_created(asteroid_mesh: Mesh)
 signal asteroid_transform_updated(idx: int, transform: Transform2D)
+
 signal asteroid_body_created(body: RigidBody2D)
 signal asteroid_approaching_character(asteroid: RigidBody2D)
 signal asteroid_exiting_character(asteroid: RigidBody2D)
@@ -118,7 +115,7 @@ func generate_chunk(chunk_coord: Vector2i):
 		for tile in asteroid_border_tiles:
 			centroid += Vector2(tile) * fine_grid_size / len(asteroid_border_tiles)
 
-		var asteroid = TheAsteroid.new()
+		var asteroid = Asteroid.new()
 		var rigid_body = RigidBody2D.new()
 
 

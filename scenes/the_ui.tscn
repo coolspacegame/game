@@ -1,0 +1,94 @@
+[gd_scene load_steps=9 format=3 uid="uid://cg741qlycoys2"]
+
+[ext_resource type="Script" uid="uid://qhdtdvu8xtmg" path="res://scripts/TheUI.gd" id="1_7yjsv"]
+[ext_resource type="Script" uid="uid://bj3ov0vc2jm17" path="res://scripts/MinimapCamera.gd" id="4_ebtbb"]
+
+[sub_resource type="Gradient" id="Gradient_bfjsh"]
+offsets = PackedFloat32Array(1)
+colors = PackedColorArray(0.101961, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_qgphy"]
+gradient = SubResource("Gradient_bfjsh")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7yjsv"]
+bg_color = Color(0.6, 0.6, 0.6, 0.388235)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.57, 0.0969, 0.0969, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="PrismMesh" id="PrismMesh_hqns4"]
+size = Vector3(8, 15, 8)
+
+[sub_resource type="Gradient" id="Gradient_hqns4"]
+offsets = PackedFloat32Array(0.995283)
+colors = PackedColorArray(1, 0.538, 0.34, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_x0ka3"]
+gradient = SubResource("Gradient_hqns4")
+
+[node name="UI" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_7yjsv")
+_asteroid_texture = SubResource("GradientTexture1D_qgphy")
+
+[node name="FPSCounter" type="Label" parent="."]
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_outline_size = 4
+theme_override_font_sizes/font_size = 50
+text = "60 FPS"
+
+[node name="VerticalSpace" type="Control" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BottomRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="HorizontalSpace" type="Control" parent="BottomRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MinimapPanelContainer" type="PanelContainer" parent="BottomRow"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_7yjsv")
+
+[node name="MinimapSubViewportContainer" type="SubViewportContainer" parent="BottomRow/MinimapPanelContainer"]
+layout_mode = 2
+
+[node name="SubViewport" type="SubViewport" parent="BottomRow/MinimapPanelContainer/MinimapSubViewportContainer"]
+disable_3d = true
+transparent_bg = true
+handle_input_locally = false
+snap_2d_transforms_to_pixel = true
+snap_2d_vertices_to_pixel = true
+msaa_2d = 1
+gui_disable_input = true
+size = Vector2i(128, 128)
+render_target_update_mode = 4
+
+[node name="MinimapWorld" type="Node2D" parent="BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport"]
+scale = Vector2(0.01, 0.01)
+
+[node name="CharacterIndicator" type="MeshInstance2D" parent="BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld"]
+scale = Vector2(100, -100)
+mesh = SubResource("PrismMesh_hqns4")
+texture = SubResource("GradientTexture2D_x0ka3")
+
+[node name="AsteroidIndicators" type="Node2D" parent="BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld"]
+
+[node name="MinimapCamera" type="Camera2D" parent="BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld"]
+scale = Vector2(100, 100)
+script = ExtResource("4_ebtbb")
