@@ -1,7 +1,6 @@
-[gd_scene load_steps=9 format=3 uid="uid://cg741qlycoys2"]
+[gd_scene load_steps=8 format=3 uid="uid://cg741qlycoys2"]
 
 [ext_resource type="Script" uid="uid://qhdtdvu8xtmg" path="res://scripts/TheUI.gd" id="1_7yjsv"]
-[ext_resource type="Script" uid="uid://bj3ov0vc2jm17" path="res://scripts/MinimapCamera.gd" id="4_ebtbb"]
 
 [sub_resource type="Gradient" id="Gradient_bfjsh"]
 offsets = PackedFloat32Array(1)
@@ -91,4 +90,3 @@ texture = SubResource("GradientTexture2D_x0ka3")
 
 [node name="MinimapCamera" type="Camera2D" parent="BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld"]
 scale = Vector2(100, 100)
-script = ExtResource("4_ebtbb")
