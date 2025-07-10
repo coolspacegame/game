@@ -3,6 +3,7 @@ extends VBoxContainer
 @export var _asteroid_texture: Texture2D
 var _character_indicator_node: Node2D
 var _asteroid_indicators_node: Node2D
+var _minimap_camera_node: Node2D
 
 
 func _ready() -> void:
@@ -12,12 +13,15 @@ func _ready() -> void:
 		$BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld/CharacterIndicator as Node2D
 	_asteroid_indicators_node = \
 		$BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld/AsteroidIndicators as Node2D
+	_minimap_camera_node = \
+		$BottomRow/MinimapPanelContainer/MinimapSubViewportContainer/SubViewport/MinimapWorld/MinimapCamera as Node2D
 
 func _process(_delta: float) -> void:
 	($FPSCounter as Label).text = "FPS: %d" % Engine.get_frames_per_second()
 
 func _on_character_transform_updated(character_body_transform: Transform2D):
 	_character_indicator_node.position = character_body_transform.get_origin()
+	_minimap_camera_node.position = character_body_transform.get_origin()
 	_character_indicator_node.rotation = character_body_transform.get_rotation()
 
 func _on_asteroid_mesh_created(asteroid_mesh: Mesh):
