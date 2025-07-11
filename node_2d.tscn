@@ -49,6 +49,7 @@ shape = SubResource("CircleShape2D_q6r6c")
 ignore_rotation = false
 
 [connection signal="request_character_movement" from="MinimalInputHandler" to="TheCharacter" method="_on_request_movement"]
+[connection signal="request_character_set_booster_mode" from="MinimalInputHandler" to="TheCharacter" method="_on_set_boosters_enabled"]
 [connection signal="body_transform_updated" from="TheCharacter" to="CanvasLayer/UI" method="_on_character_transform_updated"]
 [connection signal="body_transform_updated" from="TheCharacter" to="TheCamera" method="_on_character_transform_updated"]
 [connection signal="asteroid_mesh_created" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_mesh_created"]
