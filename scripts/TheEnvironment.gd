@@ -1,5 +1,7 @@
 extends Node2D
 
+const CollisionConstants := preload("res://scripts/CollisionConstants.gd")
+
 @export var _global_seed := 111
 @export var _detail_noise: FastNoiseLite
 @export var _size_noise: FastNoiseLite
@@ -190,6 +192,9 @@ func generate_chunk(chunk_coord: Vector2i):
 
 			# add the new collision shape to the asteroid's rigidbody
 			rigid_body.add_child(collision_shape)
+		
+		rigid_body.collision_layer = CollisionConstants.DEFAULT | CollisionConstants.ASTEROID
+		rigid_body.collision_mask = CollisionConstants.DEFAULT | CollisionConstants.CHARACTER | CollisionConstants.ASTEROID
 
 		asteroid.add_child(rigid_body)
 		asteroid.position = center_point
