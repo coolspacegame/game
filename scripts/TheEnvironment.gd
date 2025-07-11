@@ -36,6 +36,7 @@ const ASTEROID_MASS_PER_TILE := 2000.0
 ## The border points are generated in a circular fashion around the asteroid center.
 ## This value is calculated using sqrt(2) * TILE_SIZE / MAX_ASTEROID_RADIUS,
 ## an upper limit on how many tile-lengths the circumference of the bounding circle will be for the asteroid. 
+## (TODO I think this comment is incorrect regarding what the value represets, 'tile-lengths')
 const ASTEROID_BORDER_GENERATION_ANGULAR_INCREMENT := atan(sqrt(2) * TILE_SIZE / MAX_ASTEROID_RADIUS)
 
 ## How many steps we take around the circle as determined by the calculated increment, ASTEROID_BORDER_GENERATION_ANGULAR_INCREMENT
