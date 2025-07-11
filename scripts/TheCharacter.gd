@@ -1,6 +1,8 @@
 extends Node2D
 class_name TheCharacter
 
+const CollisionConstants = preload("res://scripts/CollisionConstants.gd")
+
 ## This signal is emitted when the internal physics body (RigidBody2D) changes its transform.
 ## Primarily position and rotation are used, though scale could also be used.
 signal body_transform_updated(global_transform: Transform2D)
@@ -8,9 +10,13 @@ signal body_transform_updated(global_transform: Transform2D)
 ## The state of the last requested input movement (one of four directions, or zero)
 var _requested_movement := Vector2i.ZERO
 
+## The state of the boosters, as most recently requested
+var _boosters_enabled := true
+
 ## asteroids that are detected within the radius of the $ProximityDetector node
 var _nearby_asteroids: Dictionary[RID, Asteroid] = {}
 
+## Whether to show the arrows that indicate player acceleration/torque in space (when boosters are on)
 var _show_debug_indicators = true
 
 ## Scale of the gravititational force from asteroids on the character
@@ -24,15 +30,18 @@ const DEBUG_INDICATOR_LINE_LENGTH = 85.0
 const DEBUG_INDICATOR_ARROW_TIP_SIZE = 10.0
 const BOOSTERS_ENABLED_COLOR: Color = Color.LIGHT_GREEN
 const BOOSTERS_DISABLED_COLOR: Color = Color.PALE_VIOLET_RED
+const WALKING_SPEED = 250.0
 
 ## This is for incoming signals to notify this script to set the "boosters enabled" state
 ## This should probably be replaced once a Skelly player/game state is integrated,
 ## and there are distinct "On asteroid" and "in space" states
-func _on_set_boosters_enabled(enabled:bool) -> void:
+func _on_set_boosters_enabled(enabled: bool) -> void:
     if enabled:
         $RenderMesh.self_modulate = BOOSTERS_ENABLED_COLOR
     else:
         $RenderMesh.self_modulate = BOOSTERS_DISABLED_COLOR
+    
+    _boosters_enabled = enabled
 
 # (TODO update this comment once "walking" mode is implemented)
 ## This is intended for incoming signals to notify this object that the player is requesting movement with the given direction.
@@ -58,7 +67,7 @@ func _on_body_exited_proximity(body: Node2D):
             _nearby_asteroids.erase(body.get_rid())
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 
 
     # in this section we are seeking the strongest gravitational pull of the nearby asteroids,
@@ -103,11 +112,11 @@ func _physics_process(_delta: float) -> void:
         angle_delta = angle_delta + 2*PI
 
     # only apply input force/torque if there is requested movement
-    var should_apply_player_input = _requested_movement != Vector2i.ZERO
+    var boosters_are_active = _requested_movement != Vector2i.ZERO and _boosters_enabled
 
-    # if we are not receiving a direct request for movement/acceleration, then apply force/torque due to gravity and the automatic rotation to 
+    # if boosters are not active, then apply force/torque due to gravity and the automatic rotation to 
     # orient towards the asteroid
-    if not should_apply_player_input:
+    if not boosters_are_active:
         var torque_spring_component = AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
         var torque_damping_component = AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
         var automatic_rotation_torque = -torque_spring_component - torque_damping_component
@@ -115,13 +124,34 @@ func _physics_process(_delta: float) -> void:
 
         character_body.apply_torque(scaled_automatic_rotation_torque)
         character_body.apply_central_force(strongest_gravity_force)
+    else:
+        # apply the force and torque as requested, presumably as a signal from the player input controller
+        var requested_movement_force := REQUESTED_MOVEMENT_FORCE_SCALE * _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation)
+        var requested_movement_torque := REQUESTED_MOVEMENT_TORQUE_SCALE * _requested_movement.x
+        character_body.apply_central_force(requested_movement_force)
+        character_body.apply_torque(requested_movement_torque)
 
+    # if we are not in booster mode at all, then attempt to walk on the surface of the asteroid
+    if not _boosters_enabled:
+        # now we are going to check for the surface normal under the character, in order to move along the surface
+        var space_rid := get_world_2d().space
+        var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
+        var character_size := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape.get_rect().size
+        var character_extent_y := character_size.y / 2
 
-    # apply the force and torque as requested, presumably as a signal from the player input controller
-    var requested_movement_force := REQUESTED_MOVEMENT_FORCE_SCALE * _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation)
-    var requested_movement_torque := REQUESTED_MOVEMENT_TORQUE_SCALE * _requested_movement.x
-    character_body.apply_central_force(requested_movement_force)
-    character_body.apply_torque(requested_movement_torque)
+        var cast_from := character_body.position
+        var cast_to := cast_from + character_body.transform.basis_xform(Vector2.DOWN) * character_extent_y * 1.5
+        var collision_mask = CollisionConstants.ASTEROID
+
+        var ray_query := PhysicsRayQueryParameters2D.create(cast_from, cast_to, collision_mask)
+        var query_result := space_state.intersect_ray(ray_query)
+
+        # if the query result dictionary has entries, then there was a hit
+        if query_result.size() > 0:
+            var surface_normal := (query_result.normal as Vector2).normalized()
+            var surface_tangent := surface_normal.rotated(PI / 2)
+
+            character_body.position += delta * WALKING_SPEED * _requested_movement.x * surface_tangent
 
     # send the signal out that will notify other nodes that the character has moved
     body_transform_updated.emit(character_body.global_transform)
@@ -130,6 +160,7 @@ func _physics_process(_delta: float) -> void:
     var character_mesh := $RenderMesh as MeshInstance2D
     var character_proximity_detector = $ProximityDetector as Area2D
 
+    # update the other children to match that of the rigid body
     character_mesh.transform = character_body.transform
     character_proximity_detector.transform = character_body.transform
 
