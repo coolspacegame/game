@@ -114,17 +114,7 @@ func _physics_process(delta: float) -> void:
     # only apply input force/torque if there is requested movement
     var boosters_are_active = _requested_movement != Vector2i.ZERO and _boosters_enabled
 
-    # if boosters are not active, then apply force/torque due to gravity and the automatic rotation to 
-    # orient towards the asteroid
-    if not boosters_are_active:
-        var torque_spring_component = AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
-        var torque_damping_component = AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
-        var automatic_rotation_torque = -torque_spring_component - torque_damping_component
-        var scaled_automatic_rotation_torque = automatic_rotation_torque * strongest_gravity_force.length()
-
-        character_body.apply_torque(scaled_automatic_rotation_torque)
-        character_body.apply_central_force(strongest_gravity_force)
-    else:
+    if boosters_are_active:
         # apply the force and torque as requested, presumably as a signal from the player input controller
         var requested_movement_force := REQUESTED_MOVEMENT_FORCE_SCALE * _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation)
         var requested_movement_torque := REQUESTED_MOVEMENT_TORQUE_SCALE * _requested_movement.x
@@ -133,6 +123,7 @@ func _physics_process(delta: float) -> void:
 
     # if we are not in booster mode at all, then attempt to walk on the surface of the asteroid
     if not _boosters_enabled:
+
         # now we are going to check for the surface normal under the character, in order to move along the surface
         var space_rid := get_world_2d().space
         var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
@@ -152,6 +143,15 @@ func _physics_process(delta: float) -> void:
             var surface_tangent := surface_normal.rotated(PI / 2)
 
             character_body.position += delta * WALKING_SPEED * _requested_movement.x * surface_tangent
+
+        # if boosters are not active, then apply force/torque due to gravity and the automatic rotation to 
+        # orient towards the asteroid
+        var torque_spring_component = AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+        var torque_damping_component = AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+        var automatic_rotation_torque = -torque_spring_component - torque_damping_component
+        var scaled_automatic_rotation_torque = automatic_rotation_torque * strongest_gravity_force.length()
+        character_body.apply_torque(scaled_automatic_rotation_torque)
+        character_body.apply_central_force(strongest_gravity_force)
 
     # send the signal out that will notify other nodes that the character has moved
     body_transform_updated.emit(character_body.global_transform)
