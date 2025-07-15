@@ -30,7 +30,7 @@ const ASTEROID_SPACING_FACTOR := 1500.0
 const MAX_ASTEROID_RADIUS := 1500.0
 
 ## determines the density of the asteroid
-const ASTEROID_MASS_PER_TILE := 2000.0
+const ASTEROID_MASS_PER_TILE := 1000.0
 
 ## This value represents the change in angle used to generate the border points for an asteroid.
 ## The border points are generated in a circular fashion around the asteroid center.
@@ -192,7 +192,7 @@ func generate_chunk(chunk_coord: Vector2i):
 		var asteroid = Asteroid.new()
 		var rigid_body = RigidBody2D.new()
 
-		rigid_body.mass = ASTEROID_MASS_PER_TILE * asteroid_border_tiles.size()
+		rigid_body.mass = ASTEROID_MASS_PER_TILE * asteroid_tiles.size()
 
 		asteroid.generate_mesh(asteroid_border_tiles, TILE_SIZE, center_of_mass)
 		asteroid_mesh_created.emit(asteroid.mesh_node.mesh)
