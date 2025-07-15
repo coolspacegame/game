@@ -21,8 +21,8 @@ var _show_debug_indicators = true
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 200.0
-const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT = 1000.0
-const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT = 300.0
+const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT = 5000000.0
+const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT = 800000.0
 const REQUESTED_MOVEMENT_FORCE_SCALE = 20000.0
 const REQUESTED_MOVEMENT_TORQUE_SCALE = 100000.0 
 const DEBUG_INDICATOR_LINE_WIDTH = 10.0
@@ -31,6 +31,7 @@ const DEBUG_INDICATOR_ARROW_TIP_SIZE = 10.0
 const BOOSTERS_ENABLED_COLOR: Color = Color.LIGHT_GREEN
 const BOOSTERS_DISABLED_COLOR: Color = Color.PALE_VIOLET_RED
 const WALKING_SPEED = 250.0
+const JUMPING_FORCE_SCALE = 500000.0
 
 ## This is for incoming signals to notify this script to set the "boosters enabled" state
 ## This should probably be replaced once a Skelly player/game state is integrated,
@@ -116,7 +117,10 @@ func _physics_process(delta: float) -> void:
 
     if boosters_are_active:
         # apply the force and torque as requested, presumably as a signal from the player input controller
-        var requested_movement_force := REQUESTED_MOVEMENT_FORCE_SCALE * _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation)
+        # TODO for now I am adding a portion (90 percent) of the gravity force because otherwise the player will have trouble 
+        # boosting away from a strong gravitational pull. My thinking is that more fuel should be burned in a way that is proportional
+        # to how much force is applied, but for now I'm faking it to allow movement from asteroid to space
+        var requested_movement_force := (REQUESTED_MOVEMENT_FORCE_SCALE + strongest_gravity_force.length() * 0.9) * _requested_movement.y * Vector2.DOWN.rotated(character_body.rotation)
         var requested_movement_torque := REQUESTED_MOVEMENT_TORQUE_SCALE * _requested_movement.x
         character_body.apply_central_force(requested_movement_force)
         character_body.apply_torque(requested_movement_torque)
@@ -144,14 +148,17 @@ func _physics_process(delta: float) -> void:
 
             character_body.position += delta * WALKING_SPEED * _requested_movement.x * surface_tangent
 
-        # if boosters are not active, then apply force/torque due to gravity and the automatic rotation to 
+            var jumping_force = character_body.transform.basis_xform(Vector2.DOWN) * _requested_movement.y * JUMPING_FORCE_SCALE
+            character_body.apply_central_force(jumping_force)
+
+        # if boosters are not active, then apply torque for the automatic rotation to 
         # orient towards the asteroid
         var torque_spring_component = AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
         var torque_damping_component = AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
         var automatic_rotation_torque = -torque_spring_component - torque_damping_component
-        var scaled_automatic_rotation_torque = automatic_rotation_torque * strongest_gravity_force.length()
-        character_body.apply_torque(scaled_automatic_rotation_torque)
-        character_body.apply_central_force(strongest_gravity_force)
+        character_body.apply_torque(automatic_rotation_torque)
+
+    character_body.apply_central_force(strongest_gravity_force)
 
     # send the signal out that will notify other nodes that the character has moved
     body_transform_updated.emit(character_body.global_transform)
