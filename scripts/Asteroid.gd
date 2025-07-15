@@ -45,7 +45,7 @@ func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin:
 
 	mesh_node.mesh = st.commit()
 
-	var num_smooth_iterations = 2
+	var num_smooth_iterations = 3
 
 	for _i in range(num_smooth_iterations):
 		var new_poly = border_points.duplicate()
@@ -60,7 +60,4 @@ func generate_mesh(tile_coords: Array, square_tile_size: float, asteroid_origin:
 			new_poly[(j + 1) % new_poly.size()] = new_p1
 
 		border_points = new_poly
-
-
-
 	collision_polygon = border_points

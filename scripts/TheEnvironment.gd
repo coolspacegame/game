@@ -1,5 +1,7 @@
 extends Node2D
 
+const CollisionConstants := preload("res://scripts/CollisionConstants.gd")
+
 @export var _global_seed := 111
 @export var _detail_noise: FastNoiseLite
 @export var _size_noise: FastNoiseLite
@@ -28,12 +30,13 @@ const ASTEROID_SPACING_FACTOR := 1500.0
 const MAX_ASTEROID_RADIUS := 1500.0
 
 ## determines the density of the asteroid
-const ASTEROID_MASS_PER_TILE := 2000.0
+const ASTEROID_MASS_PER_TILE := 1000.0
 
 ## This value represents the change in angle used to generate the border points for an asteroid.
 ## The border points are generated in a circular fashion around the asteroid center.
 ## This value is calculated using sqrt(2) * TILE_SIZE / MAX_ASTEROID_RADIUS,
 ## an upper limit on how many tile-lengths the circumference of the bounding circle will be for the asteroid. 
+## (TODO I think this comment is incorrect regarding what the value represets, 'tile-lengths')
 const ASTEROID_BORDER_GENERATION_ANGULAR_INCREMENT := atan(sqrt(2) * TILE_SIZE / MAX_ASTEROID_RADIUS)
 
 ## How many steps we take around the circle as determined by the calculated increment, ASTEROID_BORDER_GENERATION_ANGULAR_INCREMENT
@@ -129,6 +132,9 @@ func generate_chunk(chunk_coord: Vector2i):
 		# this will be the resulting border for each iteration of this for loop
 		var asteroid_border_tiles = []
 
+		# this will be all tiles in the atseroid
+		var asteroid_tiles = {}
+
 		# we want each asteroid to look different, so give the noise generation a random seed
 		_detail_noise.seed = _rng.randi()
 
@@ -169,14 +175,26 @@ func generate_chunk(chunk_coord: Vector2i):
 			if i == 0 or asteroid_border_tiles[-1] != new_tile_coord:
 				asteroid_border_tiles.append(new_tile_coord)
 
+				# we are going to keep track of all the tiles in the asteroid, so fill in the tiles
+				# from the center to the new tile
+				for current_tile_distance in range(0, tile_distance, TILE_SIZE):
+					var current_tile_center_point = current_tile_distance * Vector2(cos(tile_angle), sin(tile_angle)) + center_point
+					var current_tile_coord := Vector2i(current_tile_center_point / TILE_SIZE)
+
+					asteroid_tiles[current_tile_coord] = true
+
+		var center_of_mass = Vector2.ZERO
+		for asteroid_tile in asteroid_tiles.keys():
+
+			center_of_mass += Vector2(asteroid_tile) * TILE_SIZE / asteroid_tiles.size()
 
 		# Now we need to create the necessary nodes
 		var asteroid = Asteroid.new()
 		var rigid_body = RigidBody2D.new()
 
-		rigid_body.mass = ASTEROID_MASS_PER_TILE * asteroid_border_tiles.size()
+		rigid_body.mass = ASTEROID_MASS_PER_TILE * asteroid_tiles.size()
 
-		asteroid.generate_mesh(asteroid_border_tiles, TILE_SIZE, center_point)
+		asteroid.generate_mesh(asteroid_border_tiles, TILE_SIZE, center_of_mass)
 		asteroid_mesh_created.emit(asteroid.mesh_node.mesh)
 
 		# The asteroid generate_mesh() function calculates a collision polygon that is a smoothed
@@ -190,9 +208,12 @@ func generate_chunk(chunk_coord: Vector2i):
 
 			# add the new collision shape to the asteroid's rigidbody
 			rigid_body.add_child(collision_shape)
+		
+		rigid_body.collision_layer = CollisionConstants.DEFAULT | CollisionConstants.ASTEROID
+		rigid_body.collision_mask = CollisionConstants.DEFAULT | CollisionConstants.CHARACTER | CollisionConstants.ASTEROID
 
 		asteroid.add_child(rigid_body)
-		asteroid.position = center_point
+		asteroid.position = center_of_mass
 		asteroid.rigid_body = rigid_body
 
 		# add the asteroid we just generated to this Environment node as a child
