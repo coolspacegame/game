@@ -1,21 +1,12 @@
-[gd_scene load_steps=13 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=11 format=3 uid="uid://d01ygggpfvijv"]
 
 [ext_resource type="PackedScene" uid="uid://tbol7ay3fc5a" path="res://scenes/the_character.tscn" id="1_x0ka3"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://shaders/bg_shader.tres" id="2_q6r6c"]
 [ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://scripts/TheCamera.gd" id="4_rj586"]
 [ext_resource type="PackedScene" uid="uid://cg741qlycoys2" path="res://scenes/the_ui.tscn" id="6_d21ai"]
-[ext_resource type="Script" uid="uid://bf2cimoge6xc1" path="res://scripts/TheGenerator.gd" id="7_4d7sh"]
+[ext_resource type="PackedScene" uid="uid://hl0a6w7u01ry" path="res://scenes/the_environment.tscn" id="7_d21ai"]
 [ext_resource type="Script" uid="uid://cw2jpbgevioaq" path="res://scripts/Background.gd" id="8_4d7sh"]
 [ext_resource type="Script" uid="uid://d4iai86sp4tm" path="res://scripts/MinimalInputHandler.gd" id="10_ir8iy"]
-
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_ir8iy"]
-noise_type = 0
-frequency = 0.0051
-fractal_octaves = 3
-domain_warp_fractal_octaves = 2
-
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_hqns4"]
-fractal_octaves = 3
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
 shader = ExtResource("2_q6r6c")
@@ -36,10 +27,7 @@ script = ExtResource("10_ir8iy")
 
 [node name="TheCharacter" parent="." instance=ExtResource("1_x0ka3")]
 
-[node name="TheGenerator" type="Node2D" parent="."]
-script = ExtResource("7_4d7sh")
-detail_noise = SubResource("FastNoiseLite_ir8iy")
-size_noise = SubResource("FastNoiseLite_hqns4")
+[node name="TheEnvironment" parent="." instance=ExtResource("7_d21ai")]
 
 [node name="Background" type="MeshInstance2D" parent="."]
 light_mask = 0
@@ -63,6 +51,6 @@ ignore_rotation = false
 [connection signal="request_character_movement" from="MinimalInputHandler" to="TheCharacter" method="_on_request_movement"]
 [connection signal="body_transform_updated" from="TheCharacter" to="CanvasLayer/UI" method="_on_character_transform_updated"]
 [connection signal="body_transform_updated" from="TheCharacter" to="TheCamera" method="_on_character_transform_updated"]
-[connection signal="asteroid_mesh_created" from="TheGenerator" to="CanvasLayer/UI" method="_on_asteroid_mesh_created"]
-[connection signal="asteroid_transform_updated" from="TheGenerator" to="CanvasLayer/UI" method="_on_asteroid_transform_updated"]
+[connection signal="asteroid_mesh_created" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_mesh_created"]
+[connection signal="asteroid_transform_updated" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_transform_updated"]
 [connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]
