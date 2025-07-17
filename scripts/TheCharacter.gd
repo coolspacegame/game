@@ -70,6 +70,10 @@ func _on_body_exited_proximity(body: Node2D):
 
 func _physics_process(delta: float) -> void:
 
+    var character_mesh := $RenderMesh as MeshInstance2D
+    var character_proximity_detector = $ProximityDetector as Area2D
+    # var character_contact_detector = $ContactDetector as Area2D
+    # var character_contact_detector_shape = $ContactDetector/CollisionShape2D as CollisionShape2D
 
     # in this section we are seeking the strongest gravitational pull of the nearby asteroids,
     # and we will apply it to the character
@@ -131,25 +135,54 @@ func _physics_process(delta: float) -> void:
         # now we are going to check for the surface normal under the character, in order to move along the surface
         var space_rid := get_world_2d().space
         var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
-        var character_size := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape.get_rect().size
-        var character_extent_y := character_size.y / 2
-
-        var cast_from := character_body.position
-        var cast_to := cast_from + character_body.transform.basis_xform(Vector2.DOWN) * character_extent_y * 1.5
+        var character_shape := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape
         var collision_mask = CollisionConstants.ASTEROID
+        var shape_query := PhysicsShapeQueryParameters2D.new()
 
-        var ray_query := PhysicsRayQueryParameters2D.create(cast_from, cast_to, collision_mask)
-        var query_result := space_state.intersect_ray(ray_query)
+        # this will be a shape query of the character shape, to see if it is intersecting with an asteroid
+        shape_query.shape = character_shape
+        shape_query.transform = character_body.transform
+        shape_query.collide_with_bodies = true
+        shape_query.collision_mask = collision_mask
+
+        var shape_query_result = space_state.collide_shape(shape_query)
+        
+        # this will be the default vector for movement if there is not a hit. In other words,
+        # currently the player is allowed to move sideways even if not touching anything
+        var movement_dir = character_body.transform.basis_xform(Vector2.RIGHT).normalized()
 
         # if the query result dictionary has entries, then there was a hit
-        if query_result.size() > 0:
-            var surface_normal := (query_result.normal as Vector2).normalized()
-            var surface_tangent := surface_normal.rotated(PI / 2)
+        if shape_query_result.size() > 0:
+            var cast_from = character_body.global_position
 
-            character_body.position += delta * WALKING_SPEED * _requested_movement.x * surface_tangent
+            # there can be multiple hits, so average the position of them.
+            # the array we are going through has pairs of collision points between this shape collider and the
+            # one it is intersecting with
+            var i = 0
+            var cast_to = Vector2.ZERO
+            while i < shape_query_result.size():
+                cast_to += shape_query_result[i]
+                i += 2
+            cast_to /= (shape_query_result.size() as float / 2.0)
 
+            # now that we know there is a hit, we will find the surface normal by 
+            # doing a raycast and using the result from that
+            var ray_query := PhysicsRayQueryParameters2D.create(cast_from, cast_to, collision_mask)
+            var ray_query_result = space_state.intersect_ray(ray_query)
+
+            if ray_query_result.size() > 0:
+                var surface_normal = ray_query_result.normal.normalized()
+                var surface_tangent = surface_normal.rotated(PI / 2)
+
+                # if we got here, then we can determine movement direction using the surface tangent
+                movement_dir = surface_tangent
+
+            # additionally, if we are on a surface, we want the ability to jump if the player requests it
             var jumping_force = character_body.transform.basis_xform(Vector2.DOWN) * _requested_movement.y * JUMPING_FORCE_SCALE
             character_body.apply_central_force(jumping_force)
+
+        # finally update the horizontal movement
+        character_body.position += delta * WALKING_SPEED * _requested_movement.x * movement_dir
 
         # if boosters are not active, then apply torque for the automatic rotation to 
         # orient towards the asteroid
@@ -164,12 +197,11 @@ func _physics_process(delta: float) -> void:
     body_transform_updated.emit(character_body.global_transform)
 
     # update the rigidbody's siblings to be in the same position as the rigidbody
-    var character_mesh := $RenderMesh as MeshInstance2D
-    var character_proximity_detector = $ProximityDetector as Area2D
 
     # update the other children to match that of the rigid body
     character_mesh.transform = character_body.transform
     character_proximity_detector.transform = character_body.transform
+    # character_contact_detector.transform = character_body.transform
 
     # this is to make sure the _draw() method is called each frame
     queue_redraw()

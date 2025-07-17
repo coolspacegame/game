@@ -214,10 +214,14 @@ func generate_chunk(chunk_coord: Vector2i):
 		for asteroid_tile in asteroid_tiles.keys():
 			centered_asteroid_tiles[asteroid_tile - center_of_mass_tile] = true
 
+		var centered_asteroid_border_tiles = []
+		for asteroid_tile in asteroid_border_tiles:
+			centered_asteroid_border_tiles.append(asteroid_tile - center_of_mass_tile)
+
 		# Now we need to create the necessary nodes
 		var asteroid = Asteroid.new()
 
-		asteroid.initialize(centered_asteroid_tiles, TILE_SIZE * Vector2.ONE)
+		asteroid.initialize(centered_asteroid_tiles, centered_asteroid_border_tiles, TILE_SIZE * Vector2.ONE)
 		asteroid.update_mesh()
 		asteroid.update_collider()
 
@@ -241,7 +245,7 @@ func _process(_delta: float) -> void:
 
 func _ready() -> void:
 	_size_noise.seed = _global_seed
-	const SIZE := 5
+	const SIZE := 2
 	const EXTENT := floori(SIZE / 2.0)
 
 	for i in range(-EXTENT, EXTENT):
