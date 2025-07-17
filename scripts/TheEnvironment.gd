@@ -54,6 +54,14 @@ const POISSON_DISK_SMAPLING_NUM_CANDIDATES := 20
 const CHUNK_PADDING := Vector2.ONE * ASTEROID_SPACING_FACTOR / 2.0
 
 
+func _on_asteroid_tile_destroyed(tile_area: Area2D):
+	assert(is_ancestor_of(tile_area))
+
+	var asteroid_body = tile_area.get_parent() as RigidBody2D
+	var asteroid = asteroid_body.get_parent() as Asteroid
+	asteroid.queue_destroy_tile(tile_area)
+
+
 ## Given a bounding region, generate a series of random points
 ## that are guaranteed to be a distance greater than or equal to spacing_factor from each other
 func poisson_disk_sampling(
@@ -224,16 +232,10 @@ func generate_chunk(chunk_coord: Vector2i):
 		for asteroid_tile in asteroid_tiles.keys():
 			centered_asteroid_tiles[asteroid_tile - center_of_mass_tile] = true
 
-		var centered_asteroid_border_tiles = []
-		for asteroid_tile in asteroid_border_tiles:
-			centered_asteroid_border_tiles.append(asteroid_tile - center_of_mass_tile)
-
 		# Now we need to create the necessary nodes
 		var asteroid = Asteroid.new()
 
-		asteroid.initialize(
-			centered_asteroid_tiles, centered_asteroid_border_tiles, TILE_SIZE * Vector2.ONE
-		)
+		asteroid.initialize(centered_asteroid_tiles, TILE_SIZE * Vector2.ONE)
 		asteroid.update_mesh()
 		asteroid.update_collider()
 

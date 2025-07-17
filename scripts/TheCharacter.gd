@@ -7,17 +7,24 @@ const CollisionConstants = preload("res://scripts/CollisionConstants.gd")
 ## Primarily position and rotation are used, though scale could also be used.
 signal body_transform_updated(global_transform: Transform2D)
 
+## This is used to notify the controller of the asteroid that a tile has been destroyed/mined by the character
+signal destroyed_asteroid_tile(tile_area: Area2D)
+
 ## The state of the last requested input movement (one of four directions, or zero)
 var _requested_movement := Vector2i.ZERO
 
 ## The state of the boosters, as most recently requested
 var _boosters_enabled := true
 
+var _mining_active := false
+
 ## asteroids that are detected within the radius of the $ProximityDetector node
 var _nearby_asteroids: Dictionary[RID, Asteroid] = {}
 
 ## Whether to show the arrows that indicate player acceleration/torque in space (when boosters are on)
 var _show_debug_indicators = true
+
+var _time_since_last_mined = 0.0
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 200.0
@@ -32,6 +39,12 @@ const BOOSTERS_ENABLED_COLOR: Color = Color.LIGHT_GREEN
 const BOOSTERS_DISABLED_COLOR: Color = Color.PALE_VIOLET_RED
 const WALKING_SPEED = 250.0
 const JUMPING_FORCE_SCALE = 500000.0
+const MINING_COOLDOWN = 0.5
+
+
+## this is for incoming signals to notify this script that the "pickaxe" (or mining tool) is being used
+func _on_set_mining_active(active: bool) -> void:
+	self._mining_active = active
 
 
 ## This is for incoming signals to notify this script to set the "boosters enabled" state
@@ -73,11 +86,6 @@ func _on_body_exited_proximity(body: Node2D):
 
 
 func _physics_process(delta: float) -> void:
-	var character_mesh := $RenderMesh as MeshInstance2D
-	var character_proximity_detector = $ProximityDetector as Area2D
-	# var character_contact_detector = $ContactDetector as Area2D
-	# var character_contact_detector_shape = $ContactDetector/CollisionShape2D as CollisionShape2D
-
 	# in this section we are seeking the strongest gravitational pull of the nearby asteroids,
 	# and we will apply it to the character
 
@@ -111,6 +119,9 @@ func _physics_process(delta: float) -> void:
 	var character_rotation_angle = atan2(character_orientation.y, character_orientation.x)
 	var angle_delta = character_rotation_angle - gravity_vector_angle
 
+	var space_rid := get_world_2d().space
+	var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
+
 	# correct the angle delta such that we will always rotate the character the shortest distance. This is necessary for example when
 	# one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the character would rotate almost a full 360,
 	# when really we only need to move a few degrees (We are actually working in radians)
@@ -139,17 +150,16 @@ func _physics_process(delta: float) -> void:
 	# if we are not in booster mode at all, then attempt to walk on the surface of the asteroid
 	if not _boosters_enabled:
 		# now we are going to check for the surface normal under the character, in order to move along the surface
-		var space_rid := get_world_2d().space
-		var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
 		var character_shape := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape
 		var collision_mask = CollisionConstants.ASTEROID
 		var shape_query := PhysicsShapeQueryParameters2D.new()
 
 		# this will be a shape query of the character shape, to see if it is intersecting with an asteroid
 		shape_query.shape = character_shape
-		shape_query.transform = character_body.transform
+		shape_query.transform = character_body.global_transform
 		shape_query.collide_with_bodies = true
 		shape_query.collision_mask = collision_mask
+		shape_query.margin = 5.0
 
 		var shape_query_result = space_state.collide_shape(shape_query)
 
@@ -191,8 +201,8 @@ func _physics_process(delta: float) -> void:
 			)
 			character_body.apply_central_force(jumping_force)
 
-		# finally update the horizontal movement
-		character_body.position += delta * WALKING_SPEED * _requested_movement.x * movement_dir
+			# finally update the horizontal movement
+			character_body.position += delta * WALKING_SPEED * _requested_movement.x * movement_dir
 
 		# if boosters are not active, then apply torque for the automatic rotation to
 		# orient towards the asteroid
@@ -208,12 +218,32 @@ func _physics_process(delta: float) -> void:
 	# send the signal out that will notify other nodes that the character has moved
 	body_transform_updated.emit(character_body.global_transform)
 
-	# update the rigidbody's siblings to be in the same position as the rigidbody
-
 	# update the other children to match that of the rigid body
-	character_mesh.transform = character_body.transform
-	character_proximity_detector.transform = character_body.transform
-	# character_contact_detector.transform = character_body.transform
+	for child in get_children():
+		if child == character_body:
+			continue
+		child.transform = character_body.transform
+
+	var tile_detection_shape_node := $TileDetector/CollisionShape2D as CollisionShape2D
+	var tile_detection_shape := tile_detection_shape_node.shape
+
+	_time_since_last_mined += delta
+
+	if _mining_active and _time_since_last_mined > MINING_COOLDOWN:
+		var shape_query := PhysicsShapeQueryParameters2D.new()
+		shape_query.shape = tile_detection_shape
+		shape_query.transform = tile_detection_shape_node.global_transform
+		shape_query.collide_with_areas = true
+		shape_query.collision_mask = CollisionConstants.ASTEROID_TILE
+
+		var query_result = space_state.intersect_shape(shape_query)
+
+		if query_result.size() > 0:
+			_time_since_last_mined = 0
+
+			for collision_dict in query_result:
+				var colliding_area = collision_dict.collider as Area2D
+				destroyed_asteroid_tile.emit(colliding_area)
 
 	# this is to make sure the _draw() method is called each frame
 	queue_redraw()

@@ -58,8 +58,10 @@ ignore_rotation = false
 
 [connection signal="request_character_movement" from="MinimalInputHandler" to="TheCharacter" method="_on_request_movement"]
 [connection signal="request_character_set_booster_mode" from="MinimalInputHandler" to="TheCharacter" method="_on_set_boosters_enabled"]
+[connection signal="request_character_set_mining_active" from="MinimalInputHandler" to="TheCharacter" method="_on_set_mining_active"]
 [connection signal="body_transform_updated" from="TheCharacter" to="CanvasLayer/UI" method="_on_character_transform_updated"]
 [connection signal="body_transform_updated" from="TheCharacter" to="TheCamera" method="_on_character_transform_updated"]
+[connection signal="destroyed_asteroid_tile" from="TheCharacter" to="TheEnvironment" method="_on_asteroid_tile_destroyed"]
 [connection signal="asteroid_mesh_created" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_mesh_created"]
 [connection signal="asteroid_transform_updated" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_transform_updated"]
 [connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]
