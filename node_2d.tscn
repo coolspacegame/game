@@ -1,24 +1,19 @@
-[gd_scene load_steps=22 format=3 uid="uid://d01ygggpfvijv"]
+[gd_scene load_steps=13 format=3 uid="uid://d01ygggpfvijv"]
 
 [ext_resource type="PackedScene" uid="uid://tbol7ay3fc5a" path="res://scenes/the_character.tscn" id="1_x0ka3"]
 [ext_resource type="Shader" uid="uid://bxtj0hvu04viu" path="res://shaders/bg_shader.tres" id="2_q6r6c"]
 [ext_resource type="Script" uid="uid://dv4vjoges1tfq" path="res://scripts/TheCamera.gd" id="4_rj586"]
-[ext_resource type="Script" uid="uid://mt3ebexr2yyf" path="res://scripts/TheLabel.gd" id="5_4d7sh"]
-[ext_resource type="Script" uid="uid://bf2cimoge6xc1" path="res://scripts/TheGenerator.gd" id="7_4d7sh"]
+[ext_resource type="PackedScene" uid="uid://cg741qlycoys2" path="res://scenes/the_ui.tscn" id="6_d21ai"]
+[ext_resource type="PackedScene" uid="uid://hl0a6w7u01ry" path="res://scenes/the_environment.tscn" id="7_d21ai"]
 [ext_resource type="Script" uid="uid://cw2jpbgevioaq" path="res://scripts/Background.gd" id="8_4d7sh"]
-[ext_resource type="Script" uid="uid://bj3ov0vc2jm17" path="res://scripts/MinimapCamera.gd" id="9_hqns4"]
 [ext_resource type="Script" uid="uid://d4iai86sp4tm" path="res://scripts/MinimalInputHandler.gd" id="10_ir8iy"]
-[ext_resource type="Script" uid="uid://dctu8lqks5d5u" path="res://scripts/CharacterDot.gd" id="11_hqns4"]
-[ext_resource type="Script" uid="uid://vxmpfx5v4gmh" path="res://scripts/AsteroidDots.gd" id="11_x0ka3"]
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_ir8iy"]
-noise_type = 0
-frequency = 0.0051
-fractal_octaves = 3
-domain_warp_fractal_octaves = 2
+[sub_resource type="Gradient" id="Gradient_d21ai"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_hqns4"]
-fractal_octaves = 3
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_rj586"]
+gradient = SubResource("Gradient_d21ai")
+width = 1024
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d21ai"]
 shader = ExtResource("2_q6r6c")
@@ -28,43 +23,19 @@ size = Vector2(4096, 4096)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_q6r6c"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hqns4"]
-bg_color = Color(0.6, 0.6, 0.6, 0.388235)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.57, 0.0969, 0.0969, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="PrismMesh" id="PrismMesh_hqns4"]
-size = Vector3(8, 15, 8)
-
-[sub_resource type="Gradient" id="Gradient_hqns4"]
-offsets = PackedFloat32Array(0.995283)
-colors = PackedColorArray(1, 0.538, 0.34, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_x0ka3"]
-gradient = SubResource("Gradient_hqns4")
-
-[sub_resource type="Gradient" id="Gradient_ir8iy"]
-offsets = PackedFloat32Array(1)
-colors = PackedColorArray(0.25, 0.925, 1, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_hqns4"]
-gradient = SubResource("Gradient_ir8iy")
-
 [node name="Node2D" type="Node2D"]
+
+[node name="MinimalInputHandler" type="Node" parent="."]
+script = ExtResource("10_ir8iy")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="UI" parent="CanvasLayer" instance=ExtResource("6_d21ai")]
 
 [node name="TheCharacter" parent="." instance=ExtResource("1_x0ka3")]
 
-[node name="TheGenerator" type="Node2D" parent="."]
-script = ExtResource("7_4d7sh")
-detail_noise = SubResource("FastNoiseLite_ir8iy")
-size_noise = SubResource("FastNoiseLite_hqns4")
+[node name="TheEnvironment" parent="." instance=ExtResource("7_d21ai")]
+_asteroid_texture = SubResource("GradientTexture1D_rj586")
 
 [node name="Background" type="MeshInstance2D" parent="."]
 light_mask = 0
@@ -85,77 +56,12 @@ shape = SubResource("CircleShape2D_q6r6c")
 [node name="Camera2D" type="Camera2D" parent="TheCamera"]
 ignore_rotation = false
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
-
-[node name="Container" type="VBoxContainer" parent="CanvasLayer"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Label" type="Label" parent="CanvasLayer/Container"]
-layout_mode = 2
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/shadow_outline_size = 4
-theme_override_font_sizes/font_size = 50
-text = "60 FPS"
-script = ExtResource("5_4d7sh")
-
-[node name="Control2" type="Control" parent="CanvasLayer/Container"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/Container"]
-layout_mode = 2
-
-[node name="Control" type="Control" parent="CanvasLayer/Container/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/Container/HBoxContainer"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_hqns4")
-
-[node name="SubViewportContainer" type="SubViewportContainer" parent="CanvasLayer/Container/HBoxContainer/PanelContainer"]
-layout_mode = 2
-
-[node name="SubViewport" type="SubViewport" parent="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer"]
-disable_3d = true
-transparent_bg = true
-handle_input_locally = false
-snap_2d_transforms_to_pixel = true
-snap_2d_vertices_to_pixel = true
-msaa_2d = 1
-gui_disable_input = true
-size = Vector2i(128, 128)
-render_target_update_mode = 4
-
-[node name="MinimapWorld" type="Node2D" parent="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport"]
-scale = Vector2(0.01, 0.01)
-
-[node name="CharacterDot" type="MeshInstance2D" parent="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld"]
-scale = Vector2(100, -100)
-mesh = SubResource("PrismMesh_hqns4")
-texture = SubResource("GradientTexture2D_x0ka3")
-script = ExtResource("11_hqns4")
-
-[node name="AsteroidDots" type="Node2D" parent="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld"]
-script = ExtResource("11_x0ka3")
-asteroid_texture = SubResource("GradientTexture1D_hqns4")
-
-[node name="MinimapCamera" type="Camera2D" parent="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld"]
-scale = Vector2(100, 100)
-script = ExtResource("9_hqns4")
-
-[node name="MinimalInputHandler" type="Node" parent="."]
-script = ExtResource("10_ir8iy")
-
-[connection signal="body_transform_updated" from="TheCharacter" to="TheCamera" method="_on_character_transform_updated"]
-[connection signal="body_transform_updated" from="TheCharacter" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/CharacterDot" method="_on_character_transform_updated"]
-[connection signal="asteroid_mesh_created" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_created"]
-[connection signal="asteroid_transform_updated" from="TheGenerator" to="CanvasLayer/Container/HBoxContainer/PanelContainer/SubViewportContainer/SubViewport/MinimapWorld/AsteroidDots" method="_on_asteroid_transform_updated"]
-[connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]
 [connection signal="request_character_movement" from="MinimalInputHandler" to="TheCharacter" method="_on_request_movement"]
+[connection signal="request_character_set_booster_mode" from="MinimalInputHandler" to="TheCharacter" method="_on_set_boosters_enabled"]
+[connection signal="request_character_set_mining_active" from="MinimalInputHandler" to="TheCharacter" method="_on_set_mining_active"]
+[connection signal="body_transform_updated" from="TheCharacter" to="CanvasLayer/UI" method="_on_character_transform_updated"]
+[connection signal="body_transform_updated" from="TheCharacter" to="TheCamera" method="_on_character_transform_updated"]
+[connection signal="destroyed_asteroid_tile" from="TheCharacter" to="TheEnvironment" method="_on_asteroid_tile_destroyed"]
+[connection signal="asteroid_mesh_created" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_mesh_created"]
+[connection signal="asteroid_transform_updated" from="TheEnvironment" to="CanvasLayer/UI" method="_on_asteroid_transform_updated"]
+[connection signal="position_updated" from="TheCamera" to="Background" method="on_camera_postion_updated"]

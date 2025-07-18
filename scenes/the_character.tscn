@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://tbol7ay3fc5a"]
+[gd_scene load_steps=8 format=3 uid="uid://tbol7ay3fc5a"]
 
 [ext_resource type="Script" uid="uid://bvl35c6fdwv4n" path="res://scripts/TheCharacter.gd" id="1_jkqiv"]
 
@@ -8,13 +8,16 @@ height = 80.0
 
 [sub_resource type="Gradient" id="Gradient_rj586"]
 offsets = PackedFloat32Array(1)
-colors = PackedColorArray(0.983939, 0, 0.431755, 1)
+colors = PackedColorArray(0.98, 0.98, 0.98, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_4agl4"]
 gradient = SubResource("Gradient_rj586")
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_mdai3"]
 radius = 400.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_jkqiv"]
+radius = 25.0
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ec718"]
 radius = 20.0
@@ -31,6 +34,12 @@ texture = SubResource("GradientTexture1D_4agl4")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ProximityDetector"]
 shape = SubResource("CircleShape2D_mdai3")
+
+[node name="TileDetector" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TileDetector"]
+position = Vector2(0, 20)
+shape = SubResource("CircleShape2D_jkqiv")
 
 [node name="PhysicsBody" type="RigidBody2D" parent="."]
 mass = 100.0
