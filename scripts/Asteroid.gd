@@ -10,6 +10,7 @@ var mesh_node: MeshInstance2D
 var rigid_body: RigidBody2D
 var _tile_coords: Dictionary
 var _tile_size: Vector2
+var center_of_mass: Vector2
 var _dirty = false
 
 
@@ -22,9 +23,14 @@ func queue_destroy_tile(tile_area: Area2D):
 
 func _destroy_queued_tiles():
 	if _dirty:
-		update_collider()
-		update_mesh()
+		_refresh()
 		_dirty = false
+
+func _refresh() -> void:
+	_update_center_of_mass()
+	_update_collider()
+	_update_mesh()
+
 
 
 func _init():
@@ -51,12 +57,17 @@ func initialize(tile_coords_in: Dictionary, tile_size_in: Vector2) -> void:
 		CollisionConstants.DEFAULT | CollisionConstants.CHARACTER | CollisionConstants.ASTEROID
 	)
 
+	_refresh()
 
-func sort_tiles_by_angle(a: Vector2i, b: Vector2i) -> bool:
-	return atan2(a.y, a.x) < atan2(b.y, b.x)
+func _update_center_of_mass() -> void:
+	var center_tile := Vector2i.ZERO
+	for tile in _tile_coords:
+		center_tile += tile
+	
+	center_of_mass = Vector2(center_tile) / _tile_coords.size() * _tile_size
 
 
-func update_collider() -> void:
+func _update_collider() -> void:
 	# clear all collider children
 	for child_node in rigid_body.get_children():
 		rigid_body.remove_child(child_node)
@@ -166,7 +177,7 @@ func update_collider() -> void:
 	rigid_body.add_child(collision_polygon)
 
 
-func update_mesh() -> void:
+func _update_mesh() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 

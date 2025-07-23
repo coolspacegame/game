@@ -2,6 +2,7 @@ extends Node2D
 class_name TheCharacter
 
 const CollisionConstants = preload("res://scripts/CollisionConstants.gd")
+const TheEnvironment = preload("res://scripts/TheEnvironment.gd")
 
 ## This signal is emitted when the internal physics body (RigidBody2D) changes its transform.
 ## Primarily position and rotation are used, though scale could also be used.
@@ -27,7 +28,7 @@ var _show_debug_indicators = true
 var _time_since_last_mined = 0.0
 
 ## Scale of the gravititational force from asteroids on the character
-const GRAVITATIONAL_CONSTANT := 200.0
+const GRAVITATIONAL_CONSTANT := 2.0
 const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT = 5000000.0
 const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT = 800000.0
 const REQUESTED_MOVEMENT_FORCE_SCALE = 20000.0
@@ -93,13 +94,18 @@ func _physics_process(delta: float) -> void:
 	var character_body := $PhysicsBody as RigidBody2D
 	var character_mass := character_body.mass
 
+	const MAX_ASTEROID_RADIUS = TheEnvironment.MAX_ASTEROID_RADIUS
+
 	for asteroid: Asteroid in _nearby_asteroids.values():
 		var asteroid_body := asteroid.rigid_body as RigidBody2D
 		var asteroid_mass := asteroid_body.mass
-		var relative_position := asteroid_body.global_position - character_body.global_position
+		var relative_position := asteroid_body.global_position + asteroid.center_of_mass - character_body.global_position
 		var radius := relative_position.length()
 		var gravity_force_magnitude := (
-			GRAVITATIONAL_CONSTANT * asteroid_mass * character_mass / (radius * radius)
+
+			# this is an approximation of what the gravitational pull should be, if we assume a circular evenly-distributed asteroid
+			# This is not an 'accurate' value, but should be good enough. It takes the force as if the character were distance
+			GRAVITATIONAL_CONSTANT * asteroid_mass * character_mass * radius / (MAX_ASTEROID_RADIUS * MAX_ASTEROID_RADIUS)
 		)
 		var gravity_force_direction := relative_position.normalized()
 		var gravity_force := gravity_force_magnitude * gravity_force_direction
@@ -210,7 +216,11 @@ func _physics_process(delta: float) -> void:
 		var torque_damping_component = (
 			AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
 		)
-		var automatic_rotation_torque = -torque_spring_component - torque_damping_component
+
+		var gravity_scale_component = strongest_gravity_force.length() * 0.00001
+
+
+		var automatic_rotation_torque = -(torque_spring_component + torque_damping_component) * gravity_scale_component
 		character_body.apply_torque(automatic_rotation_torque)
 
 	character_body.apply_central_force(strongest_gravity_force)

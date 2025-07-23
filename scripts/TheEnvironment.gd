@@ -221,7 +221,9 @@ func generate_chunk(chunk_coord: Vector2i):
 				if Geometry2D.is_point_in_polygon(Vector2(i, j), border_polygon):
 					asteroid_tiles[Vector2i(i, j)] = true
 
-		# find the center of mass, this will be used as the origin for the asteroid mesh/colliders
+		# find the center of mass, this will be used as the origin for the asteroid mesh/colliders to start with
+		# Note: this 'origin' of the asteroid does not currently change as the asteroid changes, 
+		# and the asteroid keeps track of its own center of mass
 		var center_of_mass = Vector2.ZERO
 		for asteroid_tile in asteroid_tiles.keys():
 			center_of_mass += Vector2(asteroid_tile) * TILE_SIZE / asteroid_tiles.size()
@@ -236,8 +238,6 @@ func generate_chunk(chunk_coord: Vector2i):
 		var asteroid = Asteroid.new()
 
 		asteroid.initialize(centered_asteroid_tiles, TILE_SIZE * Vector2.ONE)
-		asteroid.update_mesh()
-		asteroid.update_collider()
 
 		asteroid.mesh_node.texture = _asteroid_texture
 		asteroid_mesh_created.emit(asteroid.mesh_node.mesh)
