@@ -56,6 +56,9 @@ func initialize(tile_coords_in: Dictionary, tile_size_in: Vector2) -> void:
     rigid_body.collision_mask = (
         CollisionConstants.DEFAULT | CollisionConstants.CHARACTER | CollisionConstants.ASTEROID
     )
+    rigid_body.physics_material_override = PhysicsMaterial.new()
+    rigid_body.physics_material_override.friction = 1.0
+
 
     _refresh()
 

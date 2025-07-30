@@ -33,6 +33,7 @@ script = ExtResource("10_ir8iy")
 [node name="UI" parent="CanvasLayer" instance=ExtResource("6_d21ai")]
 
 [node name="TheCharacter" parent="." instance=ExtResource("1_x0ka3")]
+z_index = 1
 
 [node name="TheEnvironment" parent="." instance=ExtResource("7_d21ai")]
 _asteroid_texture = SubResource("GradientTexture1D_rj586")

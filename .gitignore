@@ -4,3 +4,4 @@
 .idea
 exports/
 .vscode/
+.editorconfig
