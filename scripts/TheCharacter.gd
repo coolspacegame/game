@@ -33,12 +33,15 @@ var _requested_jump := false
 
 var _remaining_jumping_time := MAX_JUMPING_TIME
 
+var _rotation_adjustment_filter := []
+
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 2.0
+const ROTATION_ADJUSTMENT_FILTER_SIZE := 60
 const MAX_JUMPING_TIME := 0.5
 const HORIZONTAL_JUMP_SCALE := 0.80
 const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 10000000.0
-const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 800000.0
+const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 1000000.0
 const REQUESTED_MOVEMENT_FORCE_SCALE := 20000.0
 const REQUESTED_MOVEMENT_TORQUE_SCALE := 100000.0
 const DEBUG_INDICATOR_LINE_WIDTH := 10.0
@@ -97,6 +100,18 @@ func _on_body_exited_proximity(body: Node2D):
         if body_parent is Asteroid:
             _nearby_asteroids.erase(body.get_rid())
 
+func _init() -> void:
+    for i in range(ROTATION_ADJUSTMENT_FILTER_SIZE):
+        _rotation_adjustment_filter.append(0.0)
+
+func _update_rotation_adjustment_filter(angle_delta: float) -> float:
+    _rotation_adjustment_filter.append(angle_delta)
+    _rotation_adjustment_filter.pop_front()
+
+    var sum := 0.0
+    for value in _rotation_adjustment_filter:
+        sum += value
+    return sum / _rotation_adjustment_filter.size()
 
 func _physics_process(delta: float) -> void:
     # in this section we are seeking the strongest gravitational pull of the nearby asteroids,
@@ -224,42 +239,54 @@ func _physics_process(delta: float) -> void:
         var proximity_detector_shape := ($ProximityDetector/CollisionShape2D as CollisionShape2D).shape
         var proximity_detector_shape_rect := proximity_detector_shape.get_rect()
 
-        var rotation_cast_from = character_body.global_position
-        var rotation_cast_to = rotation_cast_from + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
+        var rotation_surface_normal_sum := Vector2.ZERO
+        var rotation_surface_normal_count := 0
+        var offset_range_size := character_shape.get_rect().size.x
+        var offset_range_idx_start_inclusive := -2
+        var offset_range_idx_end_exclusive := 3
+        var offset_step_magnitude := offset_range_size / (offset_range_idx_end_exclusive - 1 - offset_range_idx_start_inclusive)
 
-        var rotation_ray_query := PhysicsRayQueryParameters2D.create(rotation_cast_from, rotation_cast_to, collision_mask)
-        var rotation_ray_query_result = space_state.intersect_ray(rotation_ray_query)
+        for offset in range(offset_range_idx_start_inclusive, offset_range_idx_end_exclusive):
+            var rotation_cast_from = character_body.global_position + character_body.transform.basis_xform(Vector2.RIGHT * offset * offset_step_magnitude)
+            var rotation_cast_to = rotation_cast_from + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
 
+            var rotation_ray_query := PhysicsRayQueryParameters2D.create(rotation_cast_from, rotation_cast_to, collision_mask)
+            var rotation_ray_query_result = space_state.intersect_ray(rotation_ray_query)
 
-        if rotation_ray_query_result.size() > 0:
-            var rotation_surface_normal = rotation_ray_query_result.normal.normalized()
+            if rotation_ray_query_result.size() > 0:
+                rotation_surface_normal_sum += rotation_ray_query_result.normal.normalized()
+                rotation_surface_normal_count += 1
+
+        if rotation_surface_normal_count > 0:
+            var rotation_surface_normal_negated = -rotation_surface_normal_sum.normalized()
 
             # angle of the normal vector relative to +x
-            var normal_vector_angle := atan2(-rotation_surface_normal.y, -rotation_surface_normal.x)
+            var normal_vector_angle := atan2(rotation_surface_normal_negated.y, rotation_surface_normal_negated.x)
 
             # angle of the character orientation vector relative to +x
             var character_rotation_angle := atan2(character_orientation.y, character_orientation.x)
-            var angle_delta := character_rotation_angle - normal_vector_angle
+            var angle_delta := normal_vector_angle - character_rotation_angle
 
             # correct the angle delta such that we will always rotate the character the shortest distance. This is necessary for example when
             # one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the character would rotate almost a full 360,
             # when really we only need to move a few degrees (We are actually working in radians)
-            if angle_delta > PI:
-                angle_delta = angle_delta - 2 * PI
-            elif angle_delta < -PI:
-                angle_delta = angle_delta + 2 * PI
+            # if angle_delta > 0.0:
+            #     angle_delta = angle_delta - 2 * PI
+            # elif angle_delta < 0.0:
+            #     angle_delta = angle_delta + 2 * PI
 
-            var torque_spring_component := AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
-            var torque_damping_component := (
-                AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
-            )
+            # var torque_spring_component := AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+            # var torque_damping_component := (
+            #     AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+            # )
 
-            var gravity_scale_component := summed_gravity_force.length() * 0.00001
+            # var gravity_scale_component := summed_gravity_force.length() * 0.00001
 
-            var automatic_rotation_torque := (
-                -(torque_spring_component + torque_damping_component) * gravity_scale_component
-            )
-            character_body.apply_torque(automatic_rotation_torque)
+            # var automatic_rotation_torque := (
+            #     -(torque_spring_component + torque_damping_component) * gravity_scale_component
+            # )
+            # character_body.apply_torque(automatic_rotation_torque)
+            character_body.global_rotation = _update_rotation_adjustment_filter(character_body.global_rotation + angle_delta)
 
     character_body.apply_central_force(jumping_force)
 

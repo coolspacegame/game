@@ -18,7 +18,11 @@ func _on_character_transform_updated(character_body_transform: Transform2D):
     )
     apply_central_force(spring_force)
 
-    global_rotation = character_body_transform.get_rotation()
+    var spring_torque := (
+        -ANGULAR_SPRING_CONSTANT * (global_rotation - character_body_transform.get_rotation())
+        - ANGULAR_DAMPING_CONSTANT * angular_velocity
+    )
+    apply_torque(spring_torque)
 
 
 func _physics_process(_delta: float) -> void:
