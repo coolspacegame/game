@@ -35,9 +35,9 @@ var _remaining_jumping_time := MAX_JUMPING_TIME
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 2.0
-const MAX_JUMPING_TIME := 0.02
+const MAX_JUMPING_TIME := 0.5
 const HORIZONTAL_JUMP_SCALE := 0.80
-const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 5000000.0
+const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 10000000.0
 const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 800000.0
 const REQUESTED_MOVEMENT_FORCE_SCALE := 20000.0
 const REQUESTED_MOVEMENT_TORQUE_SCALE := 100000.0
@@ -47,8 +47,9 @@ const DEBUG_INDICATOR_ARROW_TIP_SIZE := 10.0
 const BOOSTERS_ENABLED_COLOR := Color.LIGHT_GREEN
 const BOOSTERS_DISABLED_COLOR := Color.PALE_VIOLET_RED
 const WALKING_SPEED := 250.0
-const JUMPING_FORCE_SCALE := 2000000.0
+const JUMPING_FORCE_SCALE := 4000000.0
 const MINING_COOLDOWN := 0.5
+
 
 
 ## this is for incoming signals to notify this script that the "pickaxe" (or mining tool) is being used
@@ -135,23 +136,9 @@ func _physics_process(delta: float) -> void:
     var chosen_gravity_direction := summed_gravity_force.normalized()
     var character_orientation := character_body.transform.basis_xform(Vector2.DOWN).normalized()
 
-    # angle of the gravity vector relative to +x
-    var gravity_vector_angle := atan2(chosen_gravity_direction.y, chosen_gravity_direction.x)
-
-    # angle of the character orientation vector relative to +x
-    var character_rotation_angle := atan2(character_orientation.y, character_orientation.x)
-    var angle_delta := character_rotation_angle - gravity_vector_angle
-
     var space_rid := get_world_2d().space
     var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
 
-    # correct the angle delta such that we will always rotate the character the shortest distance. This is necessary for example when
-    # one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the character would rotate almost a full 360,
-    # when really we only need to move a few degrees (We are actually working in radians)
-    if angle_delta > PI:
-        angle_delta = angle_delta - 2 * PI
-    elif angle_delta < -PI:
-        angle_delta = angle_delta + 2 * PI
 
     # only apply input force/torque if there is requested movement
     var boosters_are_active = _requested_movement != Vector2i.ZERO and _boosters_enabled
@@ -234,17 +221,45 @@ func _physics_process(delta: float) -> void:
 
             character_body.position += delta * WALKING_SPEED * _requested_movement.x * movement_dir
 
-        var torque_spring_component := AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
-        var torque_damping_component := (
-            AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
-        )
+        var proximity_detector_shape := ($ProximityDetector/CollisionShape2D as CollisionShape2D).shape
+        var proximity_detector_shape_rect := proximity_detector_shape.get_rect()
 
-        var gravity_scale_component := summed_gravity_force.length() * 0.00001
+        var rotation_cast_from = character_body.global_position
+        var rotation_cast_to = rotation_cast_from + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
 
-        var automatic_rotation_torque := (
-            -(torque_spring_component + torque_damping_component) * gravity_scale_component
-        )
-        character_body.apply_torque(automatic_rotation_torque)
+        var rotation_ray_query := PhysicsRayQueryParameters2D.create(rotation_cast_from, rotation_cast_to, collision_mask)
+        var rotation_ray_query_result = space_state.intersect_ray(rotation_ray_query)
+
+
+        if rotation_ray_query_result.size() > 0:
+            var rotation_surface_normal = rotation_ray_query_result.normal.normalized()
+
+            # angle of the normal vector relative to +x
+            var normal_vector_angle := atan2(-rotation_surface_normal.y, -rotation_surface_normal.x)
+
+            # angle of the character orientation vector relative to +x
+            var character_rotation_angle := atan2(character_orientation.y, character_orientation.x)
+            var angle_delta := character_rotation_angle - normal_vector_angle
+
+            # correct the angle delta such that we will always rotate the character the shortest distance. This is necessary for example when
+            # one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the character would rotate almost a full 360,
+            # when really we only need to move a few degrees (We are actually working in radians)
+            if angle_delta > PI:
+                angle_delta = angle_delta - 2 * PI
+            elif angle_delta < -PI:
+                angle_delta = angle_delta + 2 * PI
+
+            var torque_spring_component := AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+            var torque_damping_component := (
+                AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+            )
+
+            var gravity_scale_component := summed_gravity_force.length() * 0.00001
+
+            var automatic_rotation_torque := (
+                -(torque_spring_component + torque_damping_component) * gravity_scale_component
+            )
+            character_body.apply_torque(automatic_rotation_torque)
 
     character_body.apply_central_force(jumping_force)
 
