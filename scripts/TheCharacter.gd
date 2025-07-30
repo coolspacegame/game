@@ -227,7 +227,8 @@ func _physics_process(delta: float) -> void:
                         )
                     )
                     * JUMPING_FORCE_SCALE
-                    * _remaining_jumping_time / MAX_JUMPING_TIME
+                    * _remaining_jumping_time
+                    / MAX_JUMPING_TIME
                 )
                 _is_jumping = true
 
