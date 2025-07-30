@@ -39,6 +39,8 @@ func _initialize_controller_game_inputs() -> void:
                 _game_inputs.get_or_add(
                     key_input, InputConstants.InputActionStringToEnum[mapped_input_name]
                 )
+
+            #TODO: May need to update this else statement when/if gamepads are added
             else:
                 #TODO: May need to update this else statement when/if gamepads are added
                 key_input = input_action_event.as_text()
@@ -53,34 +55,24 @@ func _emit_message(InputEnum: InputConstants.InputAction, event: InputEvent):
     match InputEnum:
         InputConstants.InputAction.INPUT_ACTION_LEFT:
             _on_input_left.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_RIGHT:
             _on_input_right.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_FORWARD:
             _on_input_forward.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_BACKWARD:
             _on_input_backward.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_JUMP:
             _on_input_jump.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_0:
             _on_input_0.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_1:
             _on_input_1.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_2:
             _on_input_2.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_3:
             _on_input_3.emit(event)
-
         InputConstants.InputAction.INPUT_ACTION_PAUSE:
             _on_input_pause.emit(event)
-
         InputConstants.InputAction.DEFAULT:
             print("What did you do?!?")
 

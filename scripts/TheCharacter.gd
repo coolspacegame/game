@@ -23,24 +23,32 @@ var _mining_active := false
 var _nearby_asteroids: Dictionary[RID, Asteroid] = {}
 
 ## Whether to show the arrows that indicate player acceleration/torque in space (when boosters are on)
-var _show_debug_indicators = true
+var _show_debug_indicators := true
 
-var _time_since_last_mined = 0.0
+var _time_since_last_mined := 0.0
+
+var _is_jumping := false
+
+var _requested_jump := false
+
+var _remaining_jumping_time := MAX_JUMPING_TIME
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 2.0
-const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT = 5000000.0
-const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT = 800000.0
-const REQUESTED_MOVEMENT_FORCE_SCALE = 20000.0
-const REQUESTED_MOVEMENT_TORQUE_SCALE = 100000.0
-const DEBUG_INDICATOR_LINE_WIDTH = 10.0
-const DEBUG_INDICATOR_LINE_LENGTH = 85.0
-const DEBUG_INDICATOR_ARROW_TIP_SIZE = 10.0
-const BOOSTERS_ENABLED_COLOR: Color = Color.LIGHT_GREEN
-const BOOSTERS_DISABLED_COLOR: Color = Color.PALE_VIOLET_RED
-const WALKING_SPEED = 250.0
-const JUMPING_FORCE_SCALE = 500000.0
-const MINING_COOLDOWN = 0.5
+const MAX_JUMPING_TIME := 0.02
+const HORIZONTAL_JUMP_SCALE := 0.80
+const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 5000000.0
+const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 800000.0
+const REQUESTED_MOVEMENT_FORCE_SCALE := 20000.0
+const REQUESTED_MOVEMENT_TORQUE_SCALE := 100000.0
+const DEBUG_INDICATOR_LINE_WIDTH := 10.0
+const DEBUG_INDICATOR_LINE_LENGTH := 85.0
+const DEBUG_INDICATOR_ARROW_TIP_SIZE := 10.0
+const BOOSTERS_ENABLED_COLOR := Color.LIGHT_GREEN
+const BOOSTERS_DISABLED_COLOR := Color.PALE_VIOLET_RED
+const WALKING_SPEED := 250.0
+const JUMPING_FORCE_SCALE := 2000000.0
+const MINING_COOLDOWN := 0.5
 
 
 ## this is for incoming signals to notify this script that the "pickaxe" (or mining tool) is being used
@@ -56,7 +64,6 @@ func _on_set_boosters_enabled(enabled: bool) -> void:
         $RenderMesh.self_modulate = BOOSTERS_ENABLED_COLOR
     else:
         $RenderMesh.self_modulate = BOOSTERS_DISABLED_COLOR
-
     _boosters_enabled = enabled
 
 
@@ -69,10 +76,14 @@ func _on_request_movement(direction: Vector2i):
     _requested_movement = direction
 
 
+func _on_request_jump_active(active: bool) -> void:
+    _requested_jump = active
+
+
 ## A callback used internally for the $ProximityDetector to notify this script that there is potentially nearby asteroid
 func _on_body_entered_proximity(body: Node2D):
     if body is RigidBody2D:
-        var body_parent = body.get_parent()
+        var body_parent := body.get_parent()
         if body_parent is Asteroid:
             # TODO there should be a better key to use other than the rigid body's RID
             _nearby_asteroids[body.get_rid()] = body_parent
@@ -81,7 +92,7 @@ func _on_body_entered_proximity(body: Node2D):
 ## A callback used internally for the $ProximityDetector to notify this script that potentially asteroid is moving away from the character
 func _on_body_exited_proximity(body: Node2D):
     if body is RigidBody2D:
-        var body_parent = body.get_parent()
+        var body_parent := body.get_parent()
         if body_parent is Asteroid:
             _nearby_asteroids.erase(body.get_rid())
 
@@ -91,10 +102,11 @@ func _physics_process(delta: float) -> void:
     # and we will apply it to the character
 
     var strongest_gravity_force := Vector2.ZERO
+    var summed_gravity_force := Vector2.ZERO
     var character_body := $PhysicsBody as RigidBody2D
     var character_mass := character_body.mass
 
-    const MAX_ASTEROID_RADIUS = TheEnvironment.MAX_ASTEROID_RADIUS
+    const MAX_ASTEROID_RADIUS := TheEnvironment.MAX_ASTEROID_RADIUS
 
     for asteroid: Asteroid in _nearby_asteroids.values():
         var asteroid_body := asteroid.rigid_body as RigidBody2D
@@ -115,20 +127,20 @@ func _physics_process(delta: float) -> void:
         var gravity_force_direction := relative_position.normalized()
         var gravity_force := gravity_force_magnitude * gravity_force_direction
 
+        summed_gravity_force += gravity_force
+
         if gravity_force_magnitude > strongest_gravity_force.length():
             strongest_gravity_force = gravity_force
 
-    # here we are determining the orientation of the character relative to the asteroid with the strongest pull.
-    # This will be used to rotate the character to align with the surface of the asteroid, providing a "landing" effect
-    var chosen_gravity_direction = strongest_gravity_force.normalized()
-    var character_orientation = character_body.transform.basis_xform(Vector2.DOWN).normalized()
+    var chosen_gravity_direction := summed_gravity_force.normalized()
+    var character_orientation := character_body.transform.basis_xform(Vector2.DOWN).normalized()
 
     # angle of the gravity vector relative to +x
-    var gravity_vector_angle = atan2(chosen_gravity_direction.y, chosen_gravity_direction.x)
+    var gravity_vector_angle := atan2(chosen_gravity_direction.y, chosen_gravity_direction.x)
 
     # angle of the character orientation vector relative to +x
-    var character_rotation_angle = atan2(character_orientation.y, character_orientation.x)
-    var angle_delta = character_rotation_angle - gravity_vector_angle
+    var character_rotation_angle := atan2(character_orientation.y, character_orientation.x)
+    var angle_delta := character_rotation_angle - gravity_vector_angle
 
     var space_rid := get_world_2d().space
     var space_state := PhysicsServer2D.space_get_direct_state(space_rid)
@@ -158,11 +170,13 @@ func _physics_process(delta: float) -> void:
         character_body.apply_central_force(requested_movement_force)
         character_body.apply_torque(requested_movement_torque)
 
+    var jumping_force := Vector2.ZERO
+
     # if we are not in booster mode at all, then attempt to walk on the surface of the asteroid
     if not _boosters_enabled:
         # now we are going to check for the surface normal under the character, in order to move along the surface
         var character_shape := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape
-        var collision_mask = CollisionConstants.ASTEROID
+        var collision_mask := CollisionConstants.ASTEROID
         var shape_query := PhysicsShapeQueryParameters2D.new()
 
         # this will be a shape query of the character shape, to see if it is intersecting with an asteroid
@@ -185,8 +199,8 @@ func _physics_process(delta: float) -> void:
             # there can be multiple hits, so average the position of them.
             # the array we are going through has pairs of collision points between this shape collider and the
             # one it is intersecting with
-            var i = 0
-            var cast_to = Vector2.ZERO
+            var i := 0
+            var cast_to := Vector2.ZERO
             while i < shape_query_result.size():
                 cast_to += shape_query_result[i]
                 i += 2
@@ -204,32 +218,45 @@ func _physics_process(delta: float) -> void:
                 # if we got here, then we can determine movement direction using the surface tangent
                 movement_dir = surface_tangent
 
-            # additionally, if we are on a surface, we want the ability to jump if the player requests it
-            var jumping_force = (
-                character_body.transform.basis_xform(Vector2.DOWN)
-                * _requested_movement.y
-                * JUMPING_FORCE_SCALE
-            )
-            character_body.apply_central_force(jumping_force)
+            if not _is_jumping and _requested_jump:
+                jumping_force = (
+                    character_body.transform.basis_xform(
+                        (
+                            _requested_movement.x as float * HORIZONTAL_JUMP_SCALE * Vector2.RIGHT
+                            + Vector2.UP
+                        )
+                    )
+                    * JUMPING_FORCE_SCALE
+                    * _remaining_jumping_time / MAX_JUMPING_TIME
+                )
+                _is_jumping = true
 
-            # finally update the horizontal movement
             character_body.position += delta * WALKING_SPEED * _requested_movement.x * movement_dir
 
-        # if boosters are not active, then apply torque for the automatic rotation to
-        # orient towards the asteroid
-        var torque_spring_component = AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
-        var torque_damping_component = (
+        var torque_spring_component := AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+        var torque_damping_component := (
             AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
         )
 
-        var gravity_scale_component = strongest_gravity_force.length() * 0.00001
+        var gravity_scale_component := summed_gravity_force.length() * 0.00001
 
-        var automatic_rotation_torque = (
+        var automatic_rotation_torque := (
             -(torque_spring_component + torque_damping_component) * gravity_scale_component
         )
         character_body.apply_torque(automatic_rotation_torque)
 
-    character_body.apply_central_force(strongest_gravity_force)
+    character_body.apply_central_force(jumping_force)
+
+    if _is_jumping:
+        # update the remaining jumping time, such that it will run out after some time
+        _remaining_jumping_time = max(_remaining_jumping_time - delta, 0.0)
+        if _remaining_jumping_time <= 0.0:
+            _is_jumping = false
+
+    else:
+        _remaining_jumping_time = min(_remaining_jumping_time + delta, MAX_JUMPING_TIME)
+
+    character_body.apply_central_force(summed_gravity_force)
 
     # send the signal out that will notify other nodes that the character has moved
     body_transform_updated.emit(character_body.global_transform)
@@ -238,8 +265,11 @@ func _physics_process(delta: float) -> void:
     for child in get_children():
         if child == character_body:
             continue
+
+        # this is to make sure the _draw() method is called each frame
         child.transform = character_body.transform
 
+    # this is to make sure the _draw() method is called each frame
     var tile_detection_shape_node := $TileDetector/CollisionShape2D as CollisionShape2D
     var tile_detection_shape := tile_detection_shape_node.shape
 
@@ -252,13 +282,13 @@ func _physics_process(delta: float) -> void:
         shape_query.collide_with_areas = true
         shape_query.collision_mask = CollisionConstants.ASTEROID_TILE
 
-        var query_result = space_state.intersect_shape(shape_query)
+        var query_result := space_state.intersect_shape(shape_query)
 
         if query_result.size() > 0:
             _time_since_last_mined = 0
 
             for collision_dict in query_result:
-                var colliding_area = collision_dict.collider as Area2D
+                var colliding_area := collision_dict.collider as Area2D
                 destroyed_asteroid_tile.emit(colliding_area)
 
     # this is to make sure the _draw() method is called each frame
@@ -270,24 +300,24 @@ func _draw() -> void:
 
     # if enabled, show an arrow indicated the input acceleration given by the requested movement
     if _show_debug_indicators:
-        var arrow_vector_force = (
+        var arrow_vector_force := (
             _requested_movement.y
             * Vector2.DOWN.rotated(character_body.rotation)
             * DEBUG_INDICATOR_LINE_LENGTH
         )
-        var arrow_vector_torque = (
+        var arrow_vector_torque := (
             _requested_movement.x
             * Vector2.RIGHT.rotated(character_body.rotation)
             * DEBUG_INDICATOR_LINE_LENGTH
         )
 
         for arrow_vector in [arrow_vector_force, arrow_vector_torque]:
-            var debug_arrow_from = character_body.position
+            var debug_arrow_from := character_body.position
             var debug_arrow_to = character_body.position + arrow_vector
             draw_line(
                 debug_arrow_from, debug_arrow_to, Color.WHITE, DEBUG_INDICATOR_LINE_WIDTH, false
             )
-            var arrow_tip_points = PackedVector2Array()
+            var arrow_tip_points := PackedVector2Array()
             arrow_tip_points.append(
                 arrow_vector.normalized() * DEBUG_INDICATOR_ARROW_TIP_SIZE + debug_arrow_to
             )
@@ -303,7 +333,7 @@ func _draw() -> void:
                     + debug_arrow_to
                 )
             )
-            var arrow_tip_colors = PackedColorArray()
+            var arrow_tip_colors := PackedColorArray()
             arrow_tip_colors.append(Color.WHITE)
             arrow_tip_colors.append(Color.WHITE)
             arrow_tip_colors.append(Color.WHITE)
