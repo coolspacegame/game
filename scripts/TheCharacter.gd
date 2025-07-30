@@ -50,6 +50,7 @@ const DEBUG_INDICATOR_ARROW_TIP_SIZE := 10.0
 const BOOSTERS_ENABLED_COLOR := Color.LIGHT_GREEN
 const BOOSTERS_DISABLED_COLOR := Color.PALE_VIOLET_RED
 const WALKING_SPEED := 250.0
+const WALKING_MOVEMENT_FORCE_SCALE := 50000.0
 const JUMPING_FORCE_SCALE := 4000000.0
 const MINING_COOLDOWN := 0.5
 
@@ -173,77 +174,23 @@ func _physics_process(delta: float) -> void:
         character_body.apply_torque(requested_movement_torque)
 
     var jumping_force := Vector2.ZERO
+    var walking_force := Vector2.ZERO
+    var surface_tangent := Vector2.ZERO
 
     # if we are not in booster mode at all, then attempt to walk on the surface of the asteroid
     if not _boosters_enabled:
         # now we are going to check for the surface normal under the character, in order to move along the surface
         var character_shape := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape
         var collision_mask := CollisionConstants.ASTEROID
-        var shape_query := PhysicsShapeQueryParameters2D.new()
-
-        # this will be a shape query of the character shape, to see if it is intersecting with an asteroid
-        shape_query.shape = character_shape
-        shape_query.transform = character_body.global_transform
-        shape_query.collide_with_bodies = true
-        shape_query.collision_mask = collision_mask
-        shape_query.margin = 5.0
-
-        var shape_query_result = space_state.collide_shape(shape_query)
-
-        # this will be the default vector for movement if there is not a hit. In other words,
-        # currently the player is allowed to move sideways even if not touching anything
-        var movement_dir = character_body.transform.basis_xform(Vector2.RIGHT).normalized()
-
-        # if the query result dictionary has entries, then there was a hit
-        if shape_query_result.size() > 0:
-            var cast_from = character_body.global_position
-
-            # there can be multiple hits, so average the position of them.
-            # the array we are going through has pairs of collision points between this shape collider and the
-            # one it is intersecting with
-            var i := 0
-            var cast_to := Vector2.ZERO
-            while i < shape_query_result.size():
-                cast_to += shape_query_result[i]
-                i += 2
-            cast_to /= (shape_query_result.size() as float / 2.0)
-
-            # now that we know there is a hit, we will find the surface normal by
-            # doing a raycast and using the result from that
-            var ray_query := PhysicsRayQueryParameters2D.create(cast_from, cast_to, collision_mask)
-            var ray_query_result = space_state.intersect_ray(ray_query)
-
-            if ray_query_result.size() > 0:
-                var surface_normal = ray_query_result.normal.normalized()
-                var surface_tangent = surface_normal.rotated(PI / 2)
-
-                # if we got here, then we can determine movement direction using the surface tangent
-                movement_dir = surface_tangent
-
-            if not _is_jumping and _requested_jump:
-                jumping_force = (
-                    character_body.transform.basis_xform(
-                        (
-                            _requested_movement.x as float * HORIZONTAL_JUMP_SCALE * Vector2.RIGHT
-                            + Vector2.UP
-                        )
-                    )
-                    * JUMPING_FORCE_SCALE
-                    * _remaining_jumping_time
-                    / MAX_JUMPING_TIME
-                )
-                _is_jumping = true
-
-            character_body.position += delta * WALKING_SPEED * _requested_movement.x * movement_dir
 
         var proximity_detector_shape := ($ProximityDetector/CollisionShape2D as CollisionShape2D).shape
         var proximity_detector_shape_rect := proximity_detector_shape.get_rect()
 
-        var rotation_surface_normal_sum := Vector2.ZERO
-        var rotation_surface_normal_count := 0
+        var surface_normal_sum := Vector2.ZERO
+        var surface_normal_count := 0
         var offset_range_size := character_shape.get_rect().size.x
-        var offset_range_idx_start_inclusive := -2
-        var offset_range_idx_end_exclusive := 3
+        var offset_range_idx_start_inclusive := -1
+        var offset_range_idx_end_exclusive := 2
         var offset_step_magnitude := offset_range_size / (offset_range_idx_end_exclusive - 1 - offset_range_idx_start_inclusive)
 
         for offset in range(offset_range_idx_start_inclusive, offset_range_idx_end_exclusive):
@@ -254,39 +201,61 @@ func _physics_process(delta: float) -> void:
             var rotation_ray_query_result = space_state.intersect_ray(rotation_ray_query)
 
             if rotation_ray_query_result.size() > 0:
-                rotation_surface_normal_sum += rotation_ray_query_result.normal.normalized()
-                rotation_surface_normal_count += 1
+                surface_normal_sum += rotation_ray_query_result.normal.normalized()
+                surface_normal_count += 1
 
-        if rotation_surface_normal_count > 0:
-            var rotation_surface_normal_negated = -rotation_surface_normal_sum.normalized()
+        if surface_normal_count > 0:
+            var surface_normal = surface_normal_sum.normalized()
+            var surface_normal_negated = -surface_normal
 
             # angle of the normal vector relative to +x
-            var normal_vector_angle := atan2(rotation_surface_normal_negated.y, rotation_surface_normal_negated.x)
+            var normal_vector_angle := atan2(surface_normal_negated.y, surface_normal_negated.x)
 
             # angle of the character orientation vector relative to +x
             var character_rotation_angle := atan2(character_orientation.y, character_orientation.x)
             var angle_delta := normal_vector_angle - character_rotation_angle
 
-            # correct the angle delta such that we will always rotate the character the shortest distance. This is necessary for example when
-            # one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the character would rotate almost a full 360,
-            # when really we only need to move a few degrees (We are actually working in radians)
-            # if angle_delta > 0.0:
-            #     angle_delta = angle_delta - 2 * PI
-            # elif angle_delta < 0.0:
-            #     angle_delta = angle_delta + 2 * PI
-
-            # var torque_spring_component := AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
-            # var torque_damping_component := (
-            #     AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
-            # )
-
-            # var gravity_scale_component := summed_gravity_force.length() * 0.00001
-
-            # var automatic_rotation_torque := (
-            #     -(torque_spring_component + torque_damping_component) * gravity_scale_component
-            # )
-            # character_body.apply_torque(automatic_rotation_torque)
             character_body.global_rotation = _update_rotation_adjustment_filter(character_body.global_rotation + angle_delta)
+
+            var shape_query := PhysicsShapeQueryParameters2D.new()
+
+            # this will be a shape query of the character shape, to see if it is intersecting with an asteroid
+            shape_query.shape = character_shape
+            shape_query.transform = character_body.global_transform
+            shape_query.collide_with_bodies = true
+            shape_query.collision_mask = collision_mask
+            shape_query.margin = 5.0
+
+            var shape_query_result = space_state.collide_shape(shape_query)
+
+            # if the query result dictionary has entries, then there was a hit
+            if shape_query_result.size() > 0:
+                if not _is_jumping and _requested_jump:
+                    jumping_force = (
+                        character_body.transform.basis_xform(
+                            (
+                                # _requested_movement.x as float * HORIZONTAL_JUMP_SCALE * Vector2.RIGHT
+                                Vector2.UP
+                            )
+                        )
+                        * JUMPING_FORCE_SCALE
+                        * _remaining_jumping_time
+                        / MAX_JUMPING_TIME
+                    )
+                    _is_jumping = true
+
+            surface_tangent = surface_normal.rotated(PI / 2)
+            
+            walking_force = WALKING_MOVEMENT_FORCE_SCALE * _requested_movement.x * surface_tangent
+
+            var velocity_direction := character_body.linear_velocity.normalized()
+
+            # negate the gravity force in the direction of the surface tangent, to prevent the character from sliding down the surface
+            character_body.apply_central_force(-1.0 * summed_gravity_force.dot(velocity_direction) * velocity_direction)
+    
+    character_body.apply_central_force(walking_force)
+
+    character_body.apply_central_force(summed_gravity_force)
 
     character_body.apply_central_force(jumping_force)
 
@@ -299,7 +268,6 @@ func _physics_process(delta: float) -> void:
     else:
         _remaining_jumping_time = min(_remaining_jumping_time + delta, MAX_JUMPING_TIME)
 
-    character_body.apply_central_force(summed_gravity_force)
 
     # send the signal out that will notify other nodes that the character has moved
     body_transform_updated.emit(character_body.global_transform)
