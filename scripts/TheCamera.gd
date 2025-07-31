@@ -18,7 +18,6 @@ func _on_character_transform_updated(character_body_transform: Transform2D):
     )
     apply_central_force(spring_force)
 
-
     var angle_delta := global_rotation - character_body_transform.get_rotation()
     # correct the angle delta such that we will always rotate the camera the shortest distance. This is necessary for example when
     # one vector is close to +180 degrees, and the other close to -180 degrees. Without this correction, the camera would rotate almost a full 360,
@@ -29,8 +28,7 @@ func _on_character_transform_updated(character_body_transform: Transform2D):
         angle_delta = angle_delta + 2 * PI
 
     var spring_torque := (
-        -ANGULAR_SPRING_CONSTANT * angle_delta
-        - ANGULAR_DAMPING_CONSTANT * angular_velocity
+        -ANGULAR_SPRING_CONSTANT * angle_delta - ANGULAR_DAMPING_CONSTANT * angular_velocity
     )
     apply_torque(spring_torque)
 

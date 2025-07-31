@@ -39,8 +39,8 @@ var _arrows_to_draw: Array[Dictionary] = []
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 1.0
-const FORCE_FILTER_SIZE      := 6
-const MAX_JUMPING_TIME       := 0.5
+const FORCE_FILTER_SIZE := 6
+const MAX_JUMPING_TIME := 0.5
 const HORIZONTAL_JUMP_SCALE := 0.80
 const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 20000000.0
 const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 3000000.0
@@ -55,7 +55,6 @@ const WALKING_SPEED := 250.0
 const WALKING_MOVEMENT_FORCE_SCALE := 50000.0
 const JUMPING_FORCE_SCALE := 4000000.0
 const MINING_COOLDOWN := 0.5
-
 
 
 ## this is for incoming signals to notify this script that the "pickaxe" (or mining tool) is being used
@@ -103,9 +102,11 @@ func _on_body_exited_proximity(body: Node2D):
         if body_parent is Asteroid:
             _nearby_asteroids.erase(body.get_rid())
 
+
 func _init() -> void:
     for i in range(FORCE_FILTER_SIZE):
         _net_force_filter.append(Vector2.ZERO)
+
 
 func _update_net_force_filter(net_force: Vector2) -> Vector2:
     _net_force_filter.append(net_force)
@@ -115,6 +116,7 @@ func _update_net_force_filter(net_force: Vector2) -> Vector2:
     for value in _net_force_filter:
         sum += value
     return sum / _net_force_filter.size()
+
 
 func _physics_process(delta: float) -> void:
     # in this section we are seeking the strongest gravitational pull of the nearby asteroids,
@@ -188,7 +190,9 @@ func _physics_process(delta: float) -> void:
         var character_shape := ($PhysicsBody/CollisionShape2D as CollisionShape2D).shape
         var collision_mask := CollisionConstants.ASTEROID
 
-        var proximity_detector_shape := ($ProximityDetector/CollisionShape2D as CollisionShape2D).shape
+        var proximity_detector_shape := (
+            ($ProximityDetector/CollisionShape2D as CollisionShape2D).shape
+        )
         var proximity_detector_shape_rect := proximity_detector_shape.get_rect()
 
         var surface_normal_sum := Vector2.ZERO
@@ -197,13 +201,26 @@ func _physics_process(delta: float) -> void:
         var offset_range_size := character_shape.get_rect().size.x
         var offset_range_idx_start_inclusive := -1
         var offset_range_idx_end_exclusive := 2
-        var offset_step_magnitude := offset_range_size / (offset_range_idx_end_exclusive - 1 - offset_range_idx_start_inclusive)
+        var offset_step_magnitude := (
+            offset_range_size
+            / (offset_range_idx_end_exclusive - 1 - offset_range_idx_start_inclusive)
+        )
 
         for offset in range(offset_range_idx_start_inclusive, offset_range_idx_end_exclusive):
-            var rotation_cast_from := character_body.global_position + character_body.transform.basis_xform(Vector2.RIGHT * offset * offset_step_magnitude)
-            var rotation_cast_to := rotation_cast_from + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
+            var rotation_cast_from := (
+                character_body.global_position
+                + character_body.transform.basis_xform(
+                    Vector2.RIGHT * offset * offset_step_magnitude
+                )
+            )
+            var rotation_cast_to := (
+                rotation_cast_from
+                + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
+            )
 
-            var rotation_ray_query := PhysicsRayQueryParameters2D.create(rotation_cast_from, rotation_cast_to, collision_mask)
+            var rotation_ray_query := PhysicsRayQueryParameters2D.create(
+                rotation_cast_from, rotation_cast_to, collision_mask
+            )
             var rotation_ray_query_result := space_state.intersect_ray(rotation_ray_query)
 
             if rotation_ray_query_result.size() > 0:
@@ -219,9 +236,20 @@ func _physics_process(delta: float) -> void:
 
             var surface_vector := surface_position - character_body.global_position
             var surface_distance := surface_vector.length()
-            var surface_distance_normalized := surface_distance / (proximity_detector_shape_rect.size.y / 2.0)
-            var surface_distance_normalized_clamped := clamp(surface_distance_normalized, 0.0, 1.0) as float
-            adjusted_gravity_force = strongest_gravity_force.length() * lerp(surface_normal_negated.normalized(), strongest_gravity_force.normalized(), surface_distance_normalized_clamped)
+            var surface_distance_normalized := (
+                surface_distance / (proximity_detector_shape_rect.size.y / 2.0)
+            )
+            var surface_distance_normalized_clamped := (
+                clamp(surface_distance_normalized, 0.0, 1.0) as float
+            )
+            adjusted_gravity_force = (
+                strongest_gravity_force.length()
+                * lerp(
+                    surface_normal_negated.normalized(),
+                    strongest_gravity_force.normalized(),
+                    surface_distance_normalized_clamped
+                )
+            )
 
             # angle of the normal vector relative to +x
             var normal_vector_angle := atan2(surface_normal_negated.y, surface_normal_negated.x)
@@ -234,8 +262,10 @@ func _physics_process(delta: float) -> void:
                 angle_delta -= sign(angle_delta) * TAU
 
             character_body.apply_torque(
-                AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
-                - AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+                (
+                    AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+                    - AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+                )
             )
 
             var shape_query := PhysicsShapeQueryParameters2D.new()
@@ -249,13 +279,13 @@ func _physics_process(delta: float) -> void:
 
             var shape_query_result := space_state.get_rest_info(shape_query)
 
-
 #            var asteroid_vel := Vector2.ZERO
 
             # if the query result dictionary has entries, then there was a hit
             if shape_query_result.size() > 0:
-
-                walking_force = WALKING_MOVEMENT_FORCE_SCALE * _requested_movement.x * surface_tangent
+                walking_force = (
+                    WALKING_MOVEMENT_FORCE_SCALE * _requested_movement.x * surface_tangent
+                )
 
                 if not _is_jumping and _requested_jump:
                     jumping_force = (
@@ -272,8 +302,7 @@ func _physics_process(delta: float) -> void:
                 if walking_force.length() > 0.01:
                     net_force -= adjusted_gravity_force.dot(surface_normal) * surface_normal
 
-
-    net_force +=  walking_force + jumping_force + adjusted_gravity_force
+    net_force += walking_force + jumping_force + adjusted_gravity_force
     var net_force_filtered := _update_net_force_filter(net_force)
 
     if _is_jumping:
@@ -284,7 +313,6 @@ func _physics_process(delta: float) -> void:
 
     else:
         _remaining_jumping_time = min(_remaining_jumping_time + delta, MAX_JUMPING_TIME)
-
 
     # send the signal out that will notify other nodes that the character has moved
     body_transform_updated.emit(character_body.global_transform)
@@ -332,7 +360,9 @@ func _physics_process(delta: float) -> void:
 #        * DEBUG_INDICATOR_LINE_LENGTH
 #    )
 
-    var arrow_vector_input_force := net_force_filtered.normalized() * clampf( net_force_filtered.length() * 0.002, 50.0, 300.0)
+    var arrow_vector_input_force := (
+        net_force_filtered.normalized() * clampf(net_force_filtered.length() * 0.002, 50.0, 300.0)
+    )
 
     _arrows_to_draw.clear()
     if _show_debug_indicators:
@@ -346,11 +376,16 @@ func _physics_process(delta: float) -> void:
 #            "to": character_body.global_position + arrow_vector_torque,
 #            "color": Color.WHITE,
 #        })
-        _arrows_to_draw.append({
-            "from": character_body.global_position,
-            "to": character_body.global_position + arrow_vector_input_force,
-            "color": Color.YELLOW,
-        })
+        (
+            _arrows_to_draw
+            . append(
+                {
+                    "from": character_body.global_position,
+                    "to": character_body.global_position + arrow_vector_input_force,
+                    "color": Color.YELLOW,
+                }
+            )
+        )
 
     # this is to make sure the _draw() method is called each frame
     queue_redraw()
