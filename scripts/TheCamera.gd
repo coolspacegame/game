@@ -3,7 +3,7 @@ extends RigidBody2D
 signal position_updated(position: Vector2)
 
 const LINEAR_SPRING_CONSTANT := 50.0
-const LINEAR_DAMPING_CONSTANT := 5.0
+const LINEAR_DAMPING_CONSTANT := 10.0
 const ANGULAR_SPRING_CONSTANT := 10000.0
 const ANGULAR_DAMPING_CONSTANT := 3500.0
 

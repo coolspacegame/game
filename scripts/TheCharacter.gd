@@ -33,17 +33,17 @@ var _requested_jump := false
 
 var _remaining_jumping_time := MAX_JUMPING_TIME
 
-var _rotation_adjustment_filter := []
+var _net_force_filter := []
 
 var _arrows_to_draw: Array[Dictionary] = []
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 1.0
-const ROTATION_ADJUSTMENT_FILTER_SIZE := 60
-const MAX_JUMPING_TIME := 0.5
+const FORCE_FILTER_SIZE      := 6
+const MAX_JUMPING_TIME       := 0.5
 const HORIZONTAL_JUMP_SCALE := 0.80
-const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 10000000.0
-const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 1000000.0
+const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 20000000.0
+const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 3000000.0
 const REQUESTED_MOVEMENT_FORCE_SCALE := 20000.0
 const REQUESTED_MOVEMENT_TORQUE_SCALE := 100000.0
 const DEBUG_INDICATOR_LINE_WIDTH := 10.0
@@ -104,17 +104,17 @@ func _on_body_exited_proximity(body: Node2D):
             _nearby_asteroids.erase(body.get_rid())
 
 func _init() -> void:
-    for i in range(ROTATION_ADJUSTMENT_FILTER_SIZE):
-        _rotation_adjustment_filter.append(0.0)
+    for i in range(FORCE_FILTER_SIZE):
+        _net_force_filter.append(Vector2.ZERO)
 
-func _update_rotation_adjustment_filter(angle_delta: float) -> float:
-    _rotation_adjustment_filter.append(angle_delta)
-    _rotation_adjustment_filter.pop_front()
+func _update_net_force_filter(net_force: Vector2) -> Vector2:
+    _net_force_filter.append(net_force)
+    _net_force_filter.pop_front()
 
-    var sum := 0.0
-    for value in _rotation_adjustment_filter:
+    var sum := Vector2.ZERO
+    for value in _net_force_filter:
         sum += value
-    return sum / _rotation_adjustment_filter.size()
+    return sum / _net_force_filter.size()
 
 func _physics_process(delta: float) -> void:
     # in this section we are seeking the strongest gravitational pull of the nearby asteroids,
@@ -178,7 +178,7 @@ func _physics_process(delta: float) -> void:
 
     var jumping_force := Vector2.ZERO
     var walking_force := Vector2.ZERO
-    var surface_tangent := Vector2.ZERO
+    var adjusted_gravity_force := strongest_gravity_force
 
     character_body.freeze = false
 
@@ -192,6 +192,7 @@ func _physics_process(delta: float) -> void:
         var proximity_detector_shape_rect := proximity_detector_shape.get_rect()
 
         var surface_normal_sum := Vector2.ZERO
+        var surface_position_sum := Vector2.ZERO
         var surface_normal_count := 0
         var offset_range_size := character_shape.get_rect().size.x
         var offset_range_idx_start_inclusive := -1
@@ -207,11 +208,20 @@ func _physics_process(delta: float) -> void:
 
             if rotation_ray_query_result.size() > 0:
                 surface_normal_sum += rotation_ray_query_result.normal.normalized()
+                surface_position_sum += rotation_ray_query_result.position
                 surface_normal_count += 1
 
         if surface_normal_count > 0:
             var surface_normal := surface_normal_sum.normalized()
+            var surface_position := surface_position_sum / surface_normal_count
             var surface_normal_negated := -surface_normal
+            var surface_tangent := surface_normal.rotated(PI / 2)
+
+            var surface_vector := surface_position - character_body.global_position
+            var surface_distance := surface_vector.length()
+            var surface_distance_normalized := surface_distance / (proximity_detector_shape_rect.size.y / 2.0)
+            var surface_distance_normalized_clamped := clamp(surface_distance_normalized, 0.0, 1.0) as float
+            adjusted_gravity_force = strongest_gravity_force.length() * lerp(surface_normal_negated.normalized(), strongest_gravity_force.normalized(), surface_distance_normalized_clamped)
 
             # angle of the normal vector relative to +x
             var normal_vector_angle := atan2(surface_normal_negated.y, surface_normal_negated.x)
@@ -223,7 +233,10 @@ func _physics_process(delta: float) -> void:
             if abs(angle_delta) > PI:
                 angle_delta -= sign(angle_delta) * TAU
 
-            character_body.global_rotation = _update_rotation_adjustment_filter(character_body.global_rotation + angle_delta)
+            character_body.apply_torque(
+                AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT * angle_delta
+                - AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT * character_body.angular_velocity
+            )
 
             var shape_query := PhysicsShapeQueryParameters2D.new()
 
@@ -232,18 +245,17 @@ func _physics_process(delta: float) -> void:
             shape_query.transform = character_body.global_transform
             shape_query.collide_with_bodies = true
             shape_query.collision_mask = collision_mask
-            shape_query.margin = 5.0
+            shape_query.margin = 15.0
 
             var shape_query_result := space_state.get_rest_info(shape_query)
 
-            surface_tangent = surface_normal.rotated(PI / 2)
-            walking_force = WALKING_MOVEMENT_FORCE_SCALE * _requested_movement.x * surface_tangent
 
-            var asteroid_vel := Vector2.ZERO
+#            var asteroid_vel := Vector2.ZERO
 
             # if the query result dictionary has entries, then there was a hit
             if shape_query_result.size() > 0:
 
+                walking_force = WALKING_MOVEMENT_FORCE_SCALE * _requested_movement.x * surface_tangent
 
                 if not _is_jumping and _requested_jump:
                     jumping_force = (
@@ -254,18 +266,15 @@ func _physics_process(delta: float) -> void:
                     )
                     _is_jumping = true
 
-                asteroid_vel = shape_query_result.linear_velocity
+#                asteroid_vel = shape_query_result.linear_velocity
 
-#                var normal_force_magnitude = abs(strongest_gravity_force.dot(surface_normal))
-#                var friction_coefficient := 0.1
-#                net_force += min(normal_force_magnitude, (character_body.linear_velocity / delta).length()) * surface_tangent * -1.0 * sign(character_body.linear_velocity.dot(surface_tangent))
-#                net_force += normal_force_magnitude * surface_tangent * -1.0 * sign(character_body.linear_velocity.dot(surface_tangent))
+                # if walking, then we will apply a force to negate gravity. This is to reduce friction and allow walking
+                if walking_force.length() > 0.01:
+                    net_force -= adjusted_gravity_force.dot(surface_normal) * surface_normal
 
-                if (walking_force + jumping_force).length() < 0.01:
-                    character_body.linear_velocity = asteroid_vel
-                    net_force += -1.0 * summed_gravity_force.dot(surface_tangent) * surface_tangent
 
-    net_force += walking_force + jumping_force + strongest_gravity_force
+    net_force +=  walking_force + jumping_force + adjusted_gravity_force
+    var net_force_filtered := _update_net_force_filter(net_force)
 
     if _is_jumping:
         # update the remaining jumping time, such that it will run out after some time
@@ -312,31 +321,31 @@ func _physics_process(delta: float) -> void:
 
     character_body.apply_central_force(net_force)
 
-    var arrow_vector_force  := (
-        _requested_movement.y
-        * Vector2.DOWN.rotated(character_body.rotation)
-        * DEBUG_INDICATOR_LINE_LENGTH
-    )
-    var arrow_vector_torque := (
-        _requested_movement.x
-        * Vector2.RIGHT.rotated(character_body.rotation)
-        * DEBUG_INDICATOR_LINE_LENGTH
-    )
+#    var arrow_vector_force  := (
+#        _requested_movement.y
+#        * Vector2.DOWN.rotated(character_body.rotation)
+#        * DEBUG_INDICATOR_LINE_LENGTH
+#    )
+#    var arrow_vector_torque := (
+#        _requested_movement.x
+#        * Vector2.RIGHT.rotated(character_body.rotation)
+#        * DEBUG_INDICATOR_LINE_LENGTH
+#    )
 
-    var arrow_vector_input_force := net_force * 0.0001 * DEBUG_INDICATOR_LINE_LENGTH
+    var arrow_vector_input_force := net_force_filtered.normalized() * clampf( net_force_filtered.length() * 0.002, 50.0, 300.0)
 
     _arrows_to_draw.clear()
     if _show_debug_indicators:
-        _arrows_to_draw.append({
-            "from": character_body.global_position,
-            "to": character_body.global_position + arrow_vector_force,
-            "color": Color.WHITE,
-        })
-        _arrows_to_draw.append({
-            "from": character_body.global_position,
-            "to": character_body.global_position + arrow_vector_torque,
-            "color": Color.WHITE,
-        })
+#        _arrows_to_draw.append({
+#            "from": character_body.global_position,
+#            "to": character_body.global_position + arrow_vector_force,
+#            "color": Color.WHITE,
+#        })
+#        _arrows_to_draw.append({
+#            "from": character_body.global_position,
+#            "to": character_body.global_position + arrow_vector_torque,
+#            "color": Color.WHITE,
+#        })
         _arrows_to_draw.append({
             "from": character_body.global_position,
             "to": character_body.global_position + arrow_vector_input_force,
