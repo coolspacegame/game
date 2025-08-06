@@ -3,7 +3,7 @@ extends Node2D
 
 ## determines the density of the asteroid
 const ASTEROID_MASS_PER_TILE := 1000.0
-const COLLIDER_SMOOTH_ITERATIONS = 1
+const COLLIDER_SMOOTH_ITERATIONS := 1
 const CollisionConstants := preload("res://scripts/CollisionConstants.gd")
 
 var mesh_node: MeshInstance2D
@@ -11,7 +11,7 @@ var rigid_body: RigidBody2D
 var _tile_coords: Dictionary
 var _tile_size: Vector2
 var center_of_mass: Vector2
-var _dirty = false
+var _dirty := false
 
 
 func queue_destroy_tile(tile_area: Area2D):
