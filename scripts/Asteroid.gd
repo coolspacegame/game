@@ -8,6 +8,7 @@ const CollisionConstants := preload("res://scripts/CollisionConstants.gd")
 
 var mesh_node: MeshInstance2D
 var rigid_body: RigidBody2D
+var collision_shape: CollisionPolygon2D
 var _tile_coords: Dictionary
 var _tile_size: Vector2
 var center_of_mass: Vector2
@@ -144,18 +145,18 @@ func _update_collider() -> void:
     for tile: Vector2i in border:
         var area := Area2D.new()
         area.collision_layer = CollisionConstants.ASTEROID_TILE
-        var collision_shape := CollisionShape2D.new()
+        var new_collision_shape := CollisionShape2D.new()
         var rect_shape := RectangleShape2D.new()
         rect_shape.size = _tile_size
-        collision_shape.shape = rect_shape
+        new_collision_shape.shape = rect_shape
         area.position = _tile_size * Vector2(tile) + rect_shape.size / 2
 
         polygon.append(_tile_size * Vector2(tile) + rect_shape.size / 2)
 
         # add the new collision shape to the asteroid's rigidbody
-        area.add_child(collision_shape)
+        area.add_child(new_collision_shape)
         rigid_body.add_child(area)
-        var body_collision_shape := collision_shape.duplicate() as CollisionShape2D
+        var body_collision_shape := new_collision_shape.duplicate() as CollisionShape2D
         body_collision_shape.position = area.position
 
     # smooth out the surface collider so it's easier to walk on

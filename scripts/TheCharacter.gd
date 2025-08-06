@@ -25,35 +25,67 @@ var _nearby_asteroids: Dictionary[RID, Asteroid] = {}
 ## Whether to show the arrows that indicate player acceleration/torque in space (when boosters are on)
 var _show_debug_indicators := true
 
+## The time since the last time the character mined a tile
 var _time_since_last_mined := 0.0
 
+## Whether the character is currently jumping
 var _is_jumping := false
 
+## Whether the player has requested a jump
 var _requested_jump := false
 
+## The remaining time for the current jump
 var _remaining_jumping_time := MAX_JUMPING_TIME
 
-var _net_force_filter := []
+## The moving average filter for the force indicators
+var _debug_net_force_filter := []
 
+## The arrows to draw for the debug force indicators
 var _arrows_to_draw: Array[Dictionary] = []
 
 ## Scale of the gravititational force from asteroids on the character
 const GRAVITATIONAL_CONSTANT := 1.0
-const FORCE_FILTER_SIZE := 6
-const MAX_JUMPING_TIME := 0.5
-const HORIZONTAL_JUMP_SCALE := 0.80
+
+## spring/damping constants for the torque that rotates the character to face the direction of the gravitational force (or surface normal)
 const AUTOMATIC_ROTATION_TORQUE_SPRING_CONSTANT := 20000000.0
 const AUTOMATIC_ROTATION_TORQUE_DAMPING_CONSTANT := 3000000.0
+
+## The scale of the force/torque applied to the character when the player requests movement while in booster mode
 const REQUESTED_MOVEMENT_FORCE_SCALE := 20000.0
 const REQUESTED_MOVEMENT_TORQUE_SCALE := 100000.0
-const DEBUG_INDICATOR_LINE_WIDTH := 10.0
-const DEBUG_INDICATOR_LINE_LENGTH := 85.0
-const DEBUG_INDICATOR_ARROW_TIP_SIZE := 10.0
+
+## the moving average filter size for the force indicators
+const DEBUG_FORCE_INDICATOR_FILTER_SIZE := 6
+
+## the size of the arrows that indicate the force being applied to the character
+const DEBUG_INDICATOR_LINE_WIDTH        := 10.0
+## the arrow tip size of the arrows that indicate the force being applied to the character
+const DEBUG_INDICATOR_ARROW_TIP_SIZE         := 10.0
+## the scale of the force indicators
+const DEBUG_INDICATOR_REMAP_PREMULTIPLIER    := 0.002
+## the minimum length of the force indicators
+const DEBUG_INDICATOR_REMAP_CLAMP_LENGTH_MIN := 50.0
+## the maximum length of the force indicators
+const DEBUG_INDICATOR_REMAP_CLAMP_LENGTH_MAX := 300.0
+
+## Color that indicates the booster mode is enabled
 const BOOSTERS_ENABLED_COLOR := Color.LIGHT_GREEN
+## Color that indicates the booster mode is disabled
 const BOOSTERS_DISABLED_COLOR := Color.PALE_VIOLET_RED
-const WALKING_SPEED := 250.0
-const WALKING_MOVEMENT_FORCE_SCALE := 50000.0
-const JUMPING_FORCE_SCALE := 4000000.0
+
+## The scale of the force applied to the character when the player requests movement while in walking mode
+const WALKING_MOVEMENT_FORCE_SCALE := 30000.0
+## How much of the gravity force is cancelled when the player is walking (this is to prevent too much friction)
+const WALKING_ANTIGRAVITY_FORCE_RATIO := 1.0
+
+## Number of seconds that the jumping force is applied to the character
+const MAX_JUMPING_TIME := 0.8
+## The scale of the force applied to the character when the player requests to jump
+const JUMPING_FORCE_SCALE := 2000000.0
+## The scale of the horizontal force applied to the character when the player requests to jump while moving
+const JUMPING_TANGENTIAL_FORCE_SCALE := 400000.0
+
+## The cooldown time between mining actions (seconds)
 const MINING_COOLDOWN := 0.5
 
 
@@ -73,15 +105,13 @@ func _on_set_boosters_enabled(enabled: bool) -> void:
     _boosters_enabled = enabled
 
 
-# (TODO update this comment once "walking" mode is implemented)
 ## This is intended for incoming signals to notify this object that the player is requesting movement with the given direction.
-## The magnitude of direction.x corresponds to enabling rotation, and the sign of direction.x determines if the character will rotate
-## clockwise (> 0) or counterclockwise (< 0). Similarily, the direction.y movement determines acceleration relative to the character's
-## forward axis. A positive direction.y value means the character will accelerate forward.
+## The way this requested movement is interpreted depends on the current state of the character.
 func _on_request_movement(direction: Vector2i):
     _requested_movement = direction
 
 
+## This is intended for incoming signals to notify this object that the player is requesting to jump
 func _on_request_jump_active(active: bool) -> void:
     _requested_jump = active
 
@@ -104,18 +134,19 @@ func _on_body_exited_proximity(body: Node2D):
 
 
 func _init() -> void:
-    for i in range(FORCE_FILTER_SIZE):
-        _net_force_filter.append(Vector2.ZERO)
+    for i in range(DEBUG_FORCE_INDICATOR_FILTER_SIZE):
+        _debug_net_force_filter.append(Vector2.ZERO)
 
 
+## This function is used to smooth out the force indicators so that they don't flicker
 func _update_net_force_filter(net_force: Vector2) -> Vector2:
-    _net_force_filter.append(net_force)
-    _net_force_filter.pop_front()
+    _debug_net_force_filter.append(net_force)
+    _debug_net_force_filter.pop_front()
 
     var sum := Vector2.ZERO
-    for value in _net_force_filter:
+    for value in _debug_net_force_filter:
         sum += value
-    return sum / _net_force_filter.size()
+    return sum / _debug_net_force_filter.size()
 
 
 func _physics_process(delta: float) -> void:
@@ -123,6 +154,7 @@ func _physics_process(delta: float) -> void:
     # and we will apply it to the character
 
     var strongest_gravity_force := Vector2.ZERO
+#    var strongest_gravity_force_asteroid: Asteroid := null
     var summed_gravity_force := Vector2.ZERO
     var character_body := $PhysicsBody as RigidBody2D
     var character_mass := character_body.mass
@@ -152,6 +184,7 @@ func _physics_process(delta: float) -> void:
 
         if gravity_force_magnitude > strongest_gravity_force.length():
             strongest_gravity_force = gravity_force
+#            strongest_gravity_force_asteroid = asteroid
 
     var chosen_gravity_direction := summed_gravity_force.normalized()
     var character_orientation := character_body.transform.basis_xform(Vector2.DOWN).normalized()
@@ -182,8 +215,6 @@ func _physics_process(delta: float) -> void:
     var walking_force := Vector2.ZERO
     var adjusted_gravity_force := strongest_gravity_force
 
-    character_body.freeze = false
-
     # if we are not in booster mode at all, then attempt to walk on the surface of the asteroid
     if not _boosters_enabled:
         # now we are going to check for the surface normal under the character, in order to move along the surface
@@ -195,48 +226,27 @@ func _physics_process(delta: float) -> void:
         )
         var proximity_detector_shape_rect := proximity_detector_shape.get_rect()
 
-        var surface_normal_sum := Vector2.ZERO
-        var surface_position_sum := Vector2.ZERO
-        var surface_normal_count := 0
-        var offset_range_size := character_shape.get_rect().size.x
-        var offset_range_idx_start_inclusive := -1
-        var offset_range_idx_end_exclusive := 2
-        var offset_step_magnitude := (
-            offset_range_size
-            / (offset_range_idx_end_exclusive - 1 - offset_range_idx_start_inclusive)
+        var rotation_cast_from := (
+            character_body.global_position
+        )
+        var rotation_cast_to := (
+            rotation_cast_from
+            + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
         )
 
-        for offset in range(offset_range_idx_start_inclusive, offset_range_idx_end_exclusive):
-            var rotation_cast_from := (
-                character_body.global_position
-                + character_body.transform.basis_xform(
-                    Vector2.RIGHT * offset * offset_step_magnitude
-                )
-            )
-            var rotation_cast_to := (
-                rotation_cast_from
-                + chosen_gravity_direction * proximity_detector_shape_rect.size.y / 2
-            )
+        var rotation_ray_query := PhysicsRayQueryParameters2D.create(
+            rotation_cast_from, rotation_cast_to, collision_mask
+        )
+        var rotation_ray_query_result_down := space_state.intersect_ray(rotation_ray_query)
 
-            var rotation_ray_query := PhysicsRayQueryParameters2D.create(
-                rotation_cast_from, rotation_cast_to, collision_mask
-            )
-            var rotation_ray_query_result := space_state.intersect_ray(rotation_ray_query)
+        if rotation_ray_query_result_down.size() > 0:
+            var surface_normal = rotation_ray_query_result_down.normal.normalized()
+            var surface_position = rotation_ray_query_result_down.position
+            var surface_normal_negated = -surface_normal
 
-            if rotation_ray_query_result.size() > 0:
-                surface_normal_sum += rotation_ray_query_result.normal.normalized()
-                surface_position_sum += rotation_ray_query_result.position
-                surface_normal_count += 1
-
-        if surface_normal_count > 0:
-            var surface_normal := surface_normal_sum.normalized()
-            var surface_position := surface_position_sum / surface_normal_count
-            var surface_normal_negated := -surface_normal
-            var surface_tangent := surface_normal.rotated(PI / 2)
-
-            var surface_vector := surface_position - character_body.global_position
-            var surface_distance := surface_vector.length()
-            var surface_distance_normalized := (
+            var surface_vector = surface_position - character_body.global_position
+            var surface_distance = surface_vector.length()
+            var surface_distance_normalized = (
                 surface_distance / (proximity_detector_shape_rect.size.y / 2.0)
             )
             var surface_distance_normalized_clamped := (
@@ -251,8 +261,13 @@ func _physics_process(delta: float) -> void:
                 )
             )
 
+            # effective surface normal is the surface normal if we're close to the surface,
+            # or the gravity direction if we're far from the surface
+            var effective_surface_normal_negated := adjusted_gravity_force.normalized();
+#            var effective_surface_tangent := effective_surface_normal_negated.rotated(-PI / 2)
+
             # angle of the normal vector relative to +x
-            var normal_vector_angle := atan2(surface_normal_negated.y, surface_normal_negated.x)
+            var normal_vector_angle := atan2(effective_surface_normal_negated.y, effective_surface_normal_negated.x)
 
             # angle of the character orientation vector relative to +x
             var character_rotation_angle := atan2(character_orientation.y, character_orientation.x)
@@ -279,31 +294,33 @@ func _physics_process(delta: float) -> void:
 
             var shape_query_result := space_state.get_rest_info(shape_query)
 
-#            var asteroid_vel := Vector2.ZERO
-
-            # if the query result dictionary has entries, then there was a hit
+            # if the character is intersecting with an asteroid
             if shape_query_result.size() > 0:
+                var walking_normal = shape_query_result.normal.normalized()
+                var walking_tangent = walking_normal.rotated(_requested_movement.x * PI / 2.0)
                 walking_force = (
-                    WALKING_MOVEMENT_FORCE_SCALE * _requested_movement.x * surface_tangent
-                )
+                    WALKING_MOVEMENT_FORCE_SCALE * walking_tangent.normalized()
+                    - WALKING_ANTIGRAVITY_FORCE_RATIO
+                    * adjusted_gravity_force.dot(walking_normal)
+                    * walking_normal
+
+                ) * abs(_requested_movement.x)
 
                 if not _is_jumping and _requested_jump:
-                    jumping_force = (
-                        character_body.transform.basis_xform(Vector2.UP)
-                        * JUMPING_FORCE_SCALE
-                        * _remaining_jumping_time
-                        / MAX_JUMPING_TIME
-                    )
+                    if _remaining_jumping_time > 0.0:
+                        jumping_force = (
+                            character_body.transform.basis_xform(Vector2.UP)
+                            * JUMPING_FORCE_SCALE
+                            + character_body.transform.basis_xform(Vector2.RIGHT)
+                            * _requested_movement.x
+                            * JUMPING_TANGENTIAL_FORCE_SCALE
+                        )
+                    else:
+                       jumping_force = Vector2.ZERO
                     _is_jumping = true
 
-#                asteroid_vel = shape_query_result.linear_velocity
-
-                # if walking, then we will apply a force to negate gravity. This is to reduce friction and allow walking
-                if walking_force.length() > 0.01:
-                    net_force -= adjusted_gravity_force.dot(surface_normal) * surface_normal
-
     net_force += walking_force + jumping_force + adjusted_gravity_force
-    var net_force_filtered := _update_net_force_filter(net_force)
+    var debug_net_force_filtered := _update_net_force_filter(net_force)
 
     if _is_jumping:
         # update the remaining jumping time, such that it will run out after some time
@@ -349,33 +366,17 @@ func _physics_process(delta: float) -> void:
 
     character_body.apply_central_force(net_force)
 
-#    var arrow_vector_force  := (
-#        _requested_movement.y
-#        * Vector2.DOWN.rotated(character_body.rotation)
-#        * DEBUG_INDICATOR_LINE_LENGTH
-#    )
-#    var arrow_vector_torque := (
-#        _requested_movement.x
-#        * Vector2.RIGHT.rotated(character_body.rotation)
-#        * DEBUG_INDICATOR_LINE_LENGTH
-#    )
-
     var arrow_vector_input_force := (
-        net_force_filtered.normalized() * clampf(net_force_filtered.length() * 0.002, 50.0, 300.0)
+        debug_net_force_filtered.normalized()
+        * clampf(
+            debug_net_force_filtered.length() * DEBUG_INDICATOR_REMAP_PREMULTIPLIER,
+            DEBUG_INDICATOR_REMAP_CLAMP_LENGTH_MIN,
+            DEBUG_INDICATOR_REMAP_CLAMP_LENGTH_MAX
+         )
     )
 
     _arrows_to_draw.clear()
     if _show_debug_indicators:
-#        _arrows_to_draw.append({
-#            "from": character_body.global_position,
-#            "to": character_body.global_position + arrow_vector_force,
-#            "color": Color.WHITE,
-#        })
-#        _arrows_to_draw.append({
-#            "from": character_body.global_position,
-#            "to": character_body.global_position + arrow_vector_torque,
-#            "color": Color.WHITE,
-#        })
         (
             _arrows_to_draw
             . append(
